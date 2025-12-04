@@ -1,6 +1,6 @@
 {
   "name": "@paybuy/cints-core",
-  "version": "0.0.141",
+  "version": "0.0.142",
   "main": "dist/index.js",
   "type": "module",
   "types": "dist/index.d.ts",
