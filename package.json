@@ -1,5 +1,5 @@
 {
-  "name": "@paybuy/cints-core",
+  "name": "cints-core",
   "version": "0.0.142",
   "main": "dist/index.js",
   "type": "module",
