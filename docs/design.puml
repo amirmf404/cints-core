@@ -1,0 +1,134 @@
+@startuml design
+
+
+class CinModel {
+    dataRepository:
+    name
+    path
+    actionOptions
+    updateOptions
+    deleteOptions
+    createOptions
+    viewPageOptions
+
+}
+
+interface CinModelInterface {
+    modelOption
+
+}
+
+
+
+interface interfaces{
+    cinTabInterface
+    actionsInterface
+    cinCustomComponentInterface
+    cinLabelInterface
+    cinModelMetadataInterface
+    cinSectionInterface
+    componentsInterface
+    copyOptionsInterface
+    dataRepository
+    filterOptionInterface
+    indexPageOptionsInterface
+    paginationOptionsInterface
+    paginationInterface
+    translateOptionsInterface
+
+
+
+}
+
+
+object decorators {
+    action
+    custom
+    expose
+    field_type
+    relation
+    translate
+    validation
+
+}
+
+
+object customDecorator {
+    CinCustomFieldComponent
+    CinCustomComponent
+}
+
+object exposeDecorator {
+    cinExcludeDecorator
+    cinExposeDecorator
+    cinReadonlyDecorator
+}
+
+object field_typeDecorator {
+    cinPhoneNumberFieldDecorator
+    cinBooleanFieldDecorator
+    cinCurrencyFieldDecorator
+    cinCustomFieldDecorator
+    cinDateFieldDecorator
+    cinEmailFieldDecorator
+    cinEnumFieldDecorator
+    cinFileFieldDecorator
+    cinJsonFieldDecorator
+    cinLongTextFieldDecorator
+    cinNumberFieldDecorator
+    cinObjectFieldDecorator
+    cinPasswordFieldDecorator
+    cinTextFieldDecorator
+}
+
+
+enum enums {
+    cinActionTypeEnum
+    cinDateStructureEnum
+    cinFieldTypeEnum
+    cinFileTypeEnum
+    cinTextModeEnum
+    cinTranslateEnum
+    crudActions
+    exportCrudValidationEnum
+    exportModeEnum
+    exportTypeEnum
+    filterOperationEnum
+    indexPageModeEnum
+    loadMoreModeEnum
+}
+
+
+
+
+
+interface cinFieldMetadataInterface{
+    CinBaseFieldMetadata
+    CinTextFieldMetadata
+    CinFileFieldMetadata
+    CinRelationFieldMetadata
+    CinObjectFieldMetadata
+
+}
+
+
+
+field_typeDecorator --> cinFieldMetadataInterface
+field_typeDecorator --> interfaces
+exposeDecorator --> interfaces
+customDecorator --> interfaces
+decorators --> interfaces
+
+field_typeDecorator --> enums
+exposeDecorator --> enums
+customDecorator --> enums
+decorators --> enums
+
+
+CinModel --> interfaces
+CinModel --> field_typeDecorator
+CinModel --> CinModelInterface
+
+
+
+@enduml

@@ -1,0 +1,20 @@
+export enum CinFieldType {
+  Boolean = "boolean",
+  Number = "number",
+  Currency = "currency",
+  Text = "text",
+  LongText = "longtext",
+  File = "file",
+  Identifier = "identifier",
+  PhoneNumber = "phonenumber",
+  Enum = "enum",
+  Date = "date",
+  Password = "password",
+  Json = "json",
+  Array = "array",
+  Relation = "relation",
+  Object = "object",
+  Email = "email",
+  custom = "custom",
+  
+}

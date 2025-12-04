@@ -1,0 +1,24 @@
+{
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "tsx": true,
+      "decorators": true,
+      "dynamicImport": true
+    },
+    "minify": {
+      "compress": true
+    },
+    "target": "es2021",
+    "paths": {
+      "@routes/*": ["./../../routes/*"],
+      "@middlewares/*": ["./../../middlewares/*"]
+    },
+    "baseUrl": "."
+  },
+  "module": {
+    "type": "es6"
+  },
+
+  "exclude": ["example/**"]
+}

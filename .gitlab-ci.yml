@@ -1,0 +1,35 @@
+############ DEFINE STAGE ############
+stages:
+  - build
+
+############ DEFAULT ############
+default:
+  image: docker.arvancloud.ir/node:16.20.0
+  before_script:
+   - npm config set registry=https://npm.varlog.ir/
+   - npm set "//npm.varlog.ir/:_authToken=$NPM_TOKEN"
+
+    # - npm install -g npm-cli-login
+    # - npm-cli-login -u mh -p $NPM_PASS -e elahep110@gmail.com -r https://npm.varlog.ir/
+    # - npm config set registry https://npm.dev.paybuy.ir/
+    # - git config --global user.email "ci@paybuy.ir"
+    # - git config --global user.name "paybuy-ci"
+    # - git remote set-url origin https://elahep110:$TOKEN@git.abrsa.ir/paybuy/rontend/lib/cints-core.git
+.base:
+  when: on_success
+  tags:
+    #- build
+    - deploy
+
+############ BUILD STAGE ############
+build:
+  stage: build
+  #variables:
+  #  GIT_STRATEGY: clone
+  extends: .base
+  script:
+    - npm install
+    - npm version $(echo $CI_COMMIT_MESSAGE |grep -e "cmd\spublish\s\(\w*\)" -o|grep -e "\w*$" -o )
+    - npm publish --registry https://npm.varlog.ir/
+  rules:
+    - if: "$CI_COMMIT_MESSAGE =~ /cmd publish/"
