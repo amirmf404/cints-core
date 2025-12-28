@@ -1,4 +1,4 @@
-# Cints Documentation
+# Cints-core Documentation
 
 This repo hosts the two packages that work together to ship metadata-driven CRUD admin UIs.
 
