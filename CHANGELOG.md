@@ -18,6 +18,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `pnpm-lock.yaml`, and the list of dependencies that may run install scripts (`@swc/core`, `esbuild`) in `pnpm-workspace.yaml`.
 - `typecheck` script in `@metacrud/core`.
+- Vitest in `@metacrud/core`, with a first test file (`test/smoke.test.ts`) for model metadata and the data path mapping of the repository.
+- Root scripts that run over all packages: `build`, `clean`, `typecheck`, `test`, `format` and `format:check` (Prettier).
+- `.editorconfig` and `.prettierignore`.
+
+### Fixed
+
+- The build of `@metacrud/core` compiles its types from `tsconfig.build.json`, which only includes `src`. Test files do not end up in the type build.
 
 ### Removed
 

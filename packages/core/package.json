@@ -11,12 +11,14 @@
   ],
   "scripts": {
     "dev": "pnpm run clean && concurrently \"pnpm run build:watch\" \"pnpm run start:watch\"",
-    "build": "pnpm run clean && tsc --project tsconfig.json && swc src -d dist && rollup -c rollup.config.js && rimraf dist/dts",
+    "build": "pnpm run clean && tsc --project tsconfig.build.json && swc src -d dist && rollup -c rollup.config.js && rimraf dist/dts",
     "build:watch": "swc -w src -d dist",
     "start": "node dist/index.js",
     "start:watch": "nodemon --watch \"dist/**/*\" -e js ./dist/index.js",
     "clean": "rimraf dist",
-    "typecheck": "tsc --project tsconfig.json --noEmit --emitDeclarationOnly false --incremental false"
+    "typecheck": "tsc --project tsconfig.json --noEmit --emitDeclarationOnly false --incremental false",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "lodash": "^4.17.21",
@@ -35,7 +37,8 @@
     "rollup": "^4.18.0",
     "rollup-plugin-dts": "^6.1.1",
     "ts-node": "^10.9.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^5.1.0"
   },
   "repository": {
     "type": "git",
