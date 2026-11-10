@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Vitest in `@metacrud/core`, with a first test file (`test/smoke.test.ts`) for model metadata and the data path mapping of the repository.
 - Root scripts that run over all packages: `build`, `clean`, `typecheck`, `test`, `format` and `format:check` (Prettier).
 - `.editorconfig` and `.prettierignore`.
+- GitHub Actions workflow (`.github/workflows/ci.yml`) that type-checks, tests and builds the workspace on every push to `main` and on pull requests.
 
 ### Fixed
 
