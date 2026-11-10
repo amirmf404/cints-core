@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The library package is named `@metacrud/core` (was `cints-core`) and starts at version 0.1.0. It is marked `private` until the first release, so it cannot be published by accident. The exported API (`Cin*`) is unchanged.
 - The API reference moved from the root `README.md` to `packages/core/README.md`.
 - The example is named `metacrud-example-basic` and uses `@metacrud/core` through the workspace (`workspace:*`) instead of `file:..`.
+- The build of `@metacrud/core` compiles its types from `tsconfig.build.json`, which only includes `src`. Test files are type-checked, but are not part of the type build.
 
 ### Added
 
@@ -22,10 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Root scripts that run over all packages: `build`, `clean`, `typecheck`, `test`, `format` and `format:check` (Prettier).
 - `.editorconfig` and `.prettierignore`.
 - GitHub Actions workflow (`.github/workflows/ci.yml`) that type-checks, tests and builds the workspace on every push to `main` and on pull requests.
-
-### Fixed
-
-- The build of `@metacrud/core` compiles its types from `tsconfig.build.json`, which only includes `src`. Test files do not end up in the type build.
+- Root `README.md` that describes the goal, the status and the layout of the workspace.
 
 ### Removed
 
