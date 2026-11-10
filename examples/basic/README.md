@@ -1,21 +1,21 @@
-# cints-core example
+# Basic example
 
-A small Vite app that describes three models with `cints-core` and shows what the library makes of them.
+A small Vite app that describes three models with `@metacrud/core` and shows what the library makes of them.
 
 - The first part of the page lists the metadata of each model: its path, the enabled pages and every field with its type and options.
 - The second part uses the `User` model the way a UI library would. It creates, searches, updates and deletes a user through `User.getMetaData().dataRepository`, runs the actions and reads the color handlers.
 
 ## Run it
 
-The example uses the build of the library in the parent directory, so build that first:
+The example uses the build of the library in `packages/core`, so build that first. Run these in the repository root:
 
 ```bash
-npm run build:lib   # installs and builds cints-core in ..
-npm install
-npm run dev
+pnpm install
+pnpm build                                  # builds @metacrud/core
+pnpm --filter metacrud-example-basic dev
 ```
 
-`npm run build` type-checks the example and builds it for production.
+`pnpm --filter metacrud-example-basic build` type-checks the example and builds it for production.
 
 ## Files
 

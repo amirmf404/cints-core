@@ -1,4 +1,4 @@
-import { CrudActionsEnum, FilterOperation } from "cints-core";
+import { CrudActionsEnum, FilterOperation } from "@metacrud/core";
 import { User, UserStatus, userRepository } from "./models/user.model";
 
 export interface DemoStep {

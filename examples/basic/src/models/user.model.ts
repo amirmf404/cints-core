@@ -38,7 +38,7 @@ import {
   IndexPageMode,
   LoadMoreMode,
   SeverityTypeEnum,
-} from "cints-core";
+} from "@metacrud/core";
 import { string } from "yup";
 import { InMemoryRepository } from "../repositories/in-memory.repository";
 import { Address } from "./address.model";

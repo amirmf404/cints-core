@@ -1,4 +1,4 @@
-import { CinCrudModel, CinModel, CinText } from "cints-core";
+import { CinCrudModel, CinModel, CinText } from "@metacrud/core";
 
 /**
  * An embedded model: it only describes the fields of a nested object (see

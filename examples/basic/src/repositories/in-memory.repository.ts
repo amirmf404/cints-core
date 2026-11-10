@@ -4,7 +4,7 @@ import {
   FilterOption,
   Pagination,
   PaginationOptions,
-} from "cints-core";
+} from "@metacrud/core";
 
 type Entity = Record<string, unknown>;
 type Id = number | string;
@@ -61,7 +61,7 @@ function matches(entity: Entity, { field, operation, value }: FilterOption) {
  * would call an HTTP API here instead.
  *
  * Rows are stored exactly as they are received, so `rows` shows the payload
- * shape that cints-core produced from the `@CinDataPath` mappings.
+ * shape that @metacrud/core produced from the `@CinDataPath` mappings.
  */
 export class InMemoryRepository<T extends Entity = Entity>
   implements CrudDataRepository<T>

@@ -12,9 +12,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `change-log.md` is now `CHANGELOG.md`, and `docs/design.puml` is `packages/core/design.puml`.
 - The library package is named `@metacrud/core` (was `cints-core`) and starts at version 0.1.0. It is marked `private` until the first release, so it cannot be published by accident. The exported API (`Cin*`) is unchanged.
 - The API reference moved from the root `README.md` to `packages/core/README.md`.
+- The example is named `metacrud-example-basic` and uses `@metacrud/core` through the workspace (`workspace:*`) instead of `file:..`.
 
 ### Added
 
+- `pnpm-lock.yaml`, and the list of dependencies that may run install scripts (`@swc/core`, `esbuild`) in `pnpm-workspace.yaml`.
 - `typecheck` script in `@metacrud/core`.
 
 ### Removed

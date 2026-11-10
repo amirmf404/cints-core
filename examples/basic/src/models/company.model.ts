@@ -7,7 +7,7 @@ import {
   CinSearchable,
   CinSortable,
   CinText,
-} from "cints-core";
+} from "@metacrud/core";
 import { InMemoryRepository } from "../repositories/in-memory.repository";
 
 export const companyRepository = new InMemoryRepository([

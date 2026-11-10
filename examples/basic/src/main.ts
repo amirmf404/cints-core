@@ -4,7 +4,7 @@ import {
   CinFieldMetadata,
   CinModel,
   CrudActionsEnum,
-} from "cints-core";
+} from "@metacrud/core";
 import { runDemo } from "./demo";
 import { Address } from "./models/address.model";
 import { Company } from "./models/company.model";
@@ -110,11 +110,11 @@ function renderModel(model: typeof CinModel): HTMLElement {
 
 async function render(root: HTMLElement) {
   root.append(
-    el("h1", {}, "cints-core example"),
+    el("h1", {}, "@metacrud/core example"),
     el(
       "p",
       { className: "lead" },
-      "Three models described with decorators, and what cints-core makes of them."
+      "Three models described with decorators, and what @metacrud/core makes of them."
     ),
     el("h2", {}, "Model metadata"),
     ...[User, Company, Address].map(renderModel),
