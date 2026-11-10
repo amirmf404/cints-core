@@ -10,6 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Forked from `cints-core` 0.0.4 as `metacrud`. The git history of `cints-core` is kept.
 - The repository is a pnpm workspace. The library moved from the root to `packages/core`, and the example from `example` to `examples/basic`.
 - `change-log.md` is now `CHANGELOG.md`, and `docs/design.puml` is `packages/core/design.puml`.
+- The library package is named `@metacrud/core` (was `cints-core`) and starts at version 0.1.0. It is marked `private` until the first release, so it cannot be published by accident. The exported API (`Cin*`) is unchanged.
+- The API reference moved from the root `README.md` to `packages/core/README.md`.
+
+### Added
+
+- `typecheck` script in `@metacrud/core`.
 
 ### Removed
 

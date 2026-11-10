@@ -1,10 +1,10 @@
-# cints-core
+# @metacrud/core
 
 Decorator-first metadata toolkit for describing CRUD models, forms, tables and actions.
 
-You describe a model once, with decorators on a class: its fields, their types, validation, visibility, layout hints, actions and the repository that loads and saves it. `cints-core` turns that into one plain metadata object (`CinCrudModelMetadata`) that a UI layer can render. [`cinvue`](https://github.com/amirmf404/cinvue) is such a layer for Vue 3 and PrimeVue.
+You describe a model once, with decorators on a class: its fields, their types, validation, visibility, layout hints, actions and the repository that loads and saves it. `@metacrud/core` turns that into one plain metadata object (`CinCrudModelMetadata`) that a UI layer can render. [`cinvue`](https://github.com/amirmf404/cinvue) is such a layer for Vue 3 and PrimeVue.
 
-`cints-core` has no UI and no framework dependency. It runs in the browser and in Node.
+`@metacrud/core` has no UI and no framework dependency. It runs in the browser and in Node.
 
 ## Contents
 
@@ -29,7 +29,7 @@ You describe a model once, with decorators on a class: its fields, their types, 
 ## Installation
 
 ```bash
-npm install cints-core
+npm install @metacrud/core   # not published yet
 ```
 
 The decorators are TypeScript (legacy) decorators. Enable them in `tsconfig.json`:
@@ -42,7 +42,7 @@ The decorators are TypeScript (legacy) decorators. Enable them in `tsconfig.json
 }
 ```
 
-`cints-core` loads `reflect-metadata` itself, you do not have to import it.
+`@metacrud/core` loads `reflect-metadata` itself, you do not have to import it.
 
 ## Quick start
 
@@ -58,7 +58,7 @@ import {
   CinReadOnly,
   CinSearchable,
   CinText,
-} from "cints-core";
+} from "@metacrud/core";
 
 @CinCrudModel({
   name: "User",
@@ -199,7 +199,7 @@ owner!: number;
 
 `field.reference` is always a function: `field.reference(row)` returns the model. With a discriminator it returns `discriminators[row[discriminatorKey]]`, or `fallbackValue` when there is no match or no row. `field.discriminatorKey` holds the key.
 
-`useDataRepository` is stored as `field.useDataRepository`, a flag for the UI layer. `cints-core` does not use it.
+`useDataRepository` is stored as `field.useDataRepository`, a flag for the UI layer. `@metacrud/core` does not use it.
 
 ## Field option decorators
 
@@ -260,7 +260,7 @@ The translate decorators follow the same rules for `field.translate`.
 
 ## Validation
 
-`@CinValidation` stores a schema on `field.validation`. `cints-core` does not run it, the UI does. Pass one schema for both forms, or one per form:
+`@CinValidation` stores a schema on `field.validation`. `@metacrud/core` does not run it, the UI does. Pass one schema for both forms, or one per form:
 
 ```ts
 import { string } from "yup";
@@ -332,7 +332,7 @@ A handler receives the row and returns a `Color`: a named color, `#hex`, `rgb(..
 
 ## Custom components
 
-`CinCustomComponentInterface` is `{ component, props? }`. `cints-core` only stores it, so `component` can be anything the UI layer understands.
+`CinCustomComponentInterface` is `{ component, props? }`. `@metacrud/core` only stores it, so `component` can be anything the UI layer understands.
 
 - `@CinCustomComponent(...)` on the class sets `metadata.customComponent`.
 - `@CinCustomFieldComponent(...)` on a field sets `field.customComponentField`, on the class it sets `metadata.customComponentField`.
@@ -466,7 +466,7 @@ These are exported for UI layers and for writing your own decorators.
 A custom field decorator:
 
 ```ts
-import { updateCinField } from "cints-core";
+import { updateCinField } from "@metacrud/core";
 
 export function Placeholder(text: string) {
   return (target: object, name: string | symbol) => {
@@ -479,20 +479,19 @@ export function Placeholder(text: string) {
 
 ## Example
 
-[`example/`](./example) is a small Vite app with three models and an in-memory repository. It shows the metadata of each model and runs every repository call through it.
+[`examples/basic`](../../examples/basic) is a small Vite app with three models and an in-memory repository. It shows the metadata of each model and runs every repository call through it.
 
 ```bash
-npm install && npm run build   # build cints-core
-cd example
-npm install
-npm run dev
+pnpm install          # in the repository root
+pnpm build            # build @metacrud/core
+pnpm --filter metacrud-example-basic dev
 ```
 
 ## Development
 
 ```bash
-npm install
-npm run build   # writes dist/ (JavaScript) and dist/index.d.ts (types)
+pnpm install                          # in the repository root
+pnpm --filter @metacrud/core build    # writes dist/ (JavaScript) and dist/index.d.ts (types)
 ```
 
-Changes are listed in [`change-log.md`](./change-log.md).
+Changes are listed in [`CHANGELOG.md`](../../CHANGELOG.md).
