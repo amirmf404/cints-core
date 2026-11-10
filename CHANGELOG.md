@@ -27,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Removed
 
+- `reflect-metadata` dependency of `@metacrud/core`. Model metadata is kept in an internal `WeakMap` keyed by the class, so two classes with the same name no longer share a key, and apps do not need the polyfill.
 - The npm lockfiles (`package-lock.json`). The workspace uses pnpm.
 
 ## History of `cints-core`

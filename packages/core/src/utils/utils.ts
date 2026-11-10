@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import _ from "lodash";
 import { CinCrudModelMetadata } from "../interface/cin-model-metadata.interface";
 import {
@@ -16,12 +15,15 @@ export function pathNormalizer(input: string): string {
     .replace(/^-/, "");
 }
 
-function metadataKey(target): string {
-  return `_cints_metadata:${target.name}`;
-}
+/**
+ * Metadata of every decorated class, keyed by the class itself. A WeakMap
+ * keeps classes with the same name apart and lets unused classes be
+ * garbage-collected.
+ */
+const metadataStore = new WeakMap<object, CinCrudModelMetadata>();
 
 export function setCinMetaData(object, target): void {
-  Reflect.defineMetadata(metadataKey(target), object, target);
+  metadataStore.set(target, object);
 }
 
 /**
@@ -29,7 +31,7 @@ export function setCinMetaData(object, target): void {
  * from a parent class, so a subclass cannot modify its parent's metadata.
  */
 export function getCinMetaData(target): CinCrudModelMetadata {
-  return Reflect.getOwnMetadata(metadataKey(target), target);
+  return metadataStore.get(target);
 }
 
 export function getCinFieldObject<

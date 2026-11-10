@@ -42,7 +42,7 @@ The decorators are TypeScript (legacy) decorators. Enable them in `tsconfig.json
 }
 ```
 
-`@metacrud/core` loads `reflect-metadata` itself, you do not have to import it.
+`@metacrud/core` does not need `reflect-metadata`.
 
 ## Quick start
 

@@ -83,3 +83,13 @@ describe("data repository", () => {
     expect(calls[0].entity).toEqual({ name: "Ada", stats: { visits: 3 } });
   });
 });
+
+describe("metadata store", () => {
+  it("keeps classes with the same name apart", () => {
+    const first = createUserModel().UserModel;
+    const second = createUserModel().UserModel;
+
+    expect(first.getMetaData()).not.toBe(second.getMetaData());
+    expect(first.getMetaData().dataRepository).not.toBe(second.getMetaData().dataRepository);
+  });
+});
