@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "module": "CommonJS",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -10,14 +14,15 @@
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
     "sourceMap": true,
-    "outDir": "./dist/types",
+    "outDir": "./dist/dts",
     "resolveJsonModule": true,
     "baseUrl": "./",
     "incremental": true,
-    "skipLibCheck": true,
-    "paths": {
-      "plop": ["../../src/plop.d.ts"]
-    }
+    "skipLibCheck": true
   },
-  "exclude": ["./node_modules/**", "./example/**", "./dist/**"]
+  "exclude": [
+    "./node_modules/**",
+    "./example/**",
+    "./dist/**"
+  ]
 }

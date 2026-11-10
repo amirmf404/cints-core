@@ -1,30 +1,18 @@
-import { CinModel } from "src/model";
-import {
-  getCinFieldObject,
-  getCinMetaData,
-  setCinMetaData,
-} from "../utils/utils";
-import { set } from "lodash";
+import { CinModel } from "../model/cin-crud-model";
+import { updateCinField } from "../utils/utils";
 
 export function CinTabView({
   priority = 0,
   label,
-  model
+  model,
 }: {
-  priority: number;
+  priority?: number;
   label: string;
   model: CinModel;
 }) {
-  return (target: {} | any, name: PropertyKey): any => {
-    let object = getCinMetaData(target.constructor) ?? {};
-    let fieldObject = getCinFieldObject(object, name);
-    let TabView = {
-      priority,
-      label,
-      model
-    };
-    fieldObject.tabView = TabView;
-    set(object, `fields.${name.toString()}`, fieldObject);
-    setCinMetaData(object, target.constructor);
+  return (target: {} | any, name: PropertyKey): void => {
+    updateCinField(target, name, (field) => {
+      field.tabView = { priority, label, model };
+    });
   };
 }

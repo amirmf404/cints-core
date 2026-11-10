@@ -1,40 +1,142 @@
 import "./style.css";
-import typescriptLogo from "./typescript.svg";
-import viteLogo from "/vite.svg";
-import { setupCounter } from "./counter.ts";
-import { CinCrudModel, CinModel } from "../../dist/index";
-import { inspect } from "util";
+import {
+  CinCrudModelMetadata,
+  CinFieldMetadata,
+  CinModel,
+  CrudActionsEnum,
+} from "cints-core";
+import { runDemo } from "./demo";
+import { Address } from "./models/address.model";
+import { Company } from "./models/company.model";
+import { User } from "./models/user.model";
 
-@CinCrudModel({})
-class A extends CinModel {}
+type Child = Node | string;
 
-@CinCrudModel({})
-class B extends A {}
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  options: { className?: string } = {},
+  ...children: Child[]
+): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tag);
+  if (options.className) element.className = options.className;
+  element.append(...children);
+  return element;
+}
 
-@CinCrudModel({})
-class C extends A {}
+function describeFlags(field: CinFieldMetadata): string {
+  const flags = [
+    field.isArray && "array",
+    field.sortable && "sortable",
+    field.searchable && "searchable",
+    field.filterable && "filterable",
+    field.copyable && "copyable",
+    field.validation && "validated",
+    field.dataPath && `path: ${field.dataPath}`,
+    field.tab && `tab: ${field.tab.label}`,
+    field.section && `section: ${field.section.label}`,
+  ];
+  return flags.filter(Boolean).join(", ");
+}
 
-C.getMetaData();
+function describeHiddenOn(field: CinFieldMetadata): string {
+  return Object.values(CrudActionsEnum)
+    .filter((action) => field.expose?.[action]?.expose === false)
+    .join(", ");
+}
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-<div>
-    A:${JSON.stringify(A.getMetaData())}<br/>
-    B:${JSON.stringify(B.getMetaData())}<br/>
-    C:${JSON.stringify(C.getMetaData())}<br/>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
-  </div>
-`;
+function describePages(metadata: CinCrudModelMetadata): string {
+  const pages = [
+    metadata.createOptions.enable && "create",
+    metadata.updateOptions.enable && "update",
+    metadata.viewPageOptions.enable && "view",
+    metadata.deleteOptions?.enable && "delete",
+  ].filter(Boolean);
+  return pages.length > 0 ? pages.join(", ") : "none";
+}
 
-setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);
+function renderModel(model: typeof CinModel): HTMLElement {
+  const metadata = model.getMetaData();
+  const actions = [
+    ...metadata.actions.rowActions,
+    ...metadata.actions.modelActions,
+  ].map((action) => action.label);
+
+  const summary: [string, string][] = [
+    ["Path", metadata.path],
+    ["Enabled", describePages(metadata)],
+    ["Repository", metadata.dataRepository ? "yes" : "no"],
+    ["Labels", metadata.labels.map((label) => label.label).join(", ") || "none"],
+    ["Actions", actions.join(", ") || "none"],
+  ];
+
+  const header = el(
+    "tr",
+    {},
+    ...["Field", "Label", "Type", "Options", "Hidden on"].map((title) =>
+      el("th", {}, title)
+    )
+  );
+  const rows = Object.values(metadata.fields).map((field) =>
+    el(
+      "tr",
+      {},
+      el("td", {}, el("code", {}, field.name)),
+      el("td", {}, field.label),
+      el("td", {}, field.type ?? ""),
+      el("td", {}, describeFlags(field)),
+      el("td", {}, describeHiddenOn(field))
+    )
+  );
+
+  return el(
+    "section",
+    { className: "card" },
+    el("h3", {}, metadata.modelName),
+    el(
+      "dl",
+      {},
+      ...summary.flatMap(([term, value]) => [
+        el("dt", {}, term),
+        el("dd", {}, value),
+      ])
+    ),
+    el(
+      "div",
+      { className: "table-wrapper" },
+      el("table", {}, el("thead", {}, header), el("tbody", {}, ...rows))
+    )
+  );
+}
+
+async function render(root: HTMLElement) {
+  root.append(
+    el("h1", {}, "cints-core example"),
+    el(
+      "p",
+      { className: "lead" },
+      "Three models described with decorators, and what cints-core makes of them."
+    ),
+    el("h2", {}, "Model metadata"),
+    ...[User, Company, Address].map(renderModel),
+    el("h2", {}, "Using the metadata")
+  );
+
+  for (const step of await runDemo()) {
+    root.append(
+      el(
+        "section",
+        { className: "card" },
+        el("h3", {}, step.title),
+        el("p", {}, step.description),
+        el("pre", {}, JSON.stringify(step.result, null, 2))
+      )
+    );
+  }
+}
+
+const root = document.querySelector<HTMLDivElement>("#app")!;
+
+render(root).catch((error: unknown) => {
+  root.append(el("pre", { className: "error" }, String(error)));
+  throw error;
+});

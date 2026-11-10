@@ -1,30 +1,30 @@
-import { chain } from "lodash";
-
 import { CrudActionsEnum } from "../enum/crud-actions";
-import { getCinFieldObject, getCinMetaData, setCinMetaData } from "./utils";
-import { CinCrudModelMetadata } from "../interface/cin-model-metadata.interface";
-import { CinFieldMetadata } from "src/interface";
+import { updateCinField, updateCinMetaData } from "./utils";
+import { CinFieldMetadata } from "../interface/cin-field-metadata.interface";
+
+interface ExposeAction {
+  action: CrudActionsEnum;
+  condition?: (formValue: Record<string, unknown>) => boolean;
+}
 
 function setFieldExpose(
   field: CinFieldMetadata,
-  crudActions: {
-    action: CrudActionsEnum;
-    condition?: (formValue: Record<string, unknown>) => boolean;
-  }[],
-  value,
+  crudActions: ExposeAction[],
+  value: boolean
 ) {
   field.expose = field.expose ?? {};
 
-  chain(crudActions)
-    .compact()
-    .filter((c) => !Object.keys(field.expose).includes(c.action))
-    .forEach((c) => {
-      field.expose[c.action] = {
-        expose: value,
-        condition: c.condition,
-      };
-    })
-    .value();
+  for (const crudAction of crudActions) {
+    // The first value set for an action wins: a field decorator is applied
+    // before a class decorator, and the decorator closest to the property is
+    // applied before the ones above it.
+    if (!crudAction || crudAction.action in field.expose) continue;
+
+    field.expose[crudAction.action] = {
+      expose: value,
+      condition: crudAction.condition,
+    };
+  }
 }
 
 export function setExpose({
@@ -32,23 +32,20 @@ export function setExpose({
   value,
 }: {
   value: boolean;
-  crudActions: {
-    action: CrudActionsEnum;
-    condition?: (formValue: Record<string, unknown>) => boolean;
-  }[];
+  crudActions: ExposeAction[];
 }) {
   return (target: {} | any, name?: PropertyKey): void => {
-    const objectTarget = name ? target.constructor : target;
-    const object = getCinMetaData(objectTarget) ?? ({} as CinCrudModelMetadata);
-
-    if (!name) {
-      for (const field of Object.values(object.fields ?? [])) {
-        setFieldExpose(field, crudActions, value);
-      }
-    } else {
-      const field = getCinFieldObject(object, name);
-      setFieldExpose(field, crudActions, value);
+    if (name === undefined) {
+      updateCinMetaData(target, (metadata) => {
+        for (const field of Object.values(metadata.fields ?? {})) {
+          setFieldExpose(field, crudActions, value);
+        }
+      });
+      return;
     }
-    setCinMetaData(object, objectTarget);
+
+    updateCinField(target, name, (field) => {
+      setFieldExpose(field, crudActions, value);
+    });
   };
 }

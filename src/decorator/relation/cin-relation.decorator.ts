@@ -1,55 +1,41 @@
-import { set } from "lodash";
-import {
-  getCinFieldObject,
-  getCinMetaData,
-  setCinDefaultNameField,
-  setCinMetaData,
-} from "../../utils/utils";
+import { updateCinField } from "../../utils/utils";
 import { CinModel } from "../../model/cin-crud-model";
 import { isFunction } from "../../types/Identify.type";
 import { CinFieldType } from "../../enum/cin-field-type.enum";
 import { CinRelationFieldMetadata } from "../../interface/cin-field-metadata.interface";
 
+export interface CinRelationDiscriminatorOptions {
+  /** Property of the row whose value selects the model. */
+  discriminatorKey: string;
+  /** Model used when the row value matches none of `discriminators`. */
+  fallbackValue?: unknown;
+  /** Map from discriminator value to model. */
+  discriminators: Record<string, unknown>;
+}
+
 export function CinRelation(
-  input:
-    | CinModel
-    | {
-        discriminatorKey: string;
-        fallbackValue: unknown;
-        discriminators: Record<string, unknown>[];
-      }
-    | (() => void),
+  input: CinModel | CinRelationDiscriminatorOptions | (() => unknown),
   useDataRepository?: boolean
 ) {
-  return (target: {} | any, name: PropertyKey): any => {
-    let object = getCinMetaData(target.constructor) ?? {};
-    let fieldObject = getCinFieldObject<CinRelationFieldMetadata>(object, name);
+  const discriminatorKey: string | undefined =
+    input?.["discriminatorKey"] || undefined;
+  const discriminators: Record<string, unknown> | undefined =
+    input?.["discriminators"];
 
-    fieldObject.reference = (obj) => {
-      if (input["discriminatorKey"] && input["discriminators"]) {
-        if (
-          input["discriminators"] &&
-          input["discriminators"][obj[input["discriminatorKey"]]]
-        ) {
-          return input["discriminators"][obj[input["discriminatorKey"]]];
-        } else {
-          return input["fallbackValue"];
+  return (target: {} | any, name: PropertyKey): void => {
+    updateCinField<CinRelationFieldMetadata>(target, name, (field) => {
+      field.reference = (row?: Record<string, unknown>) => {
+        if (discriminatorKey && discriminators) {
+          const key = row?.[discriminatorKey] as string;
+          return discriminators[key] ?? input["fallbackValue"];
         }
-      } else if (isFunction(input)) {
-        return (input as () => void)();
-      } else {
+        if (isFunction(input)) return (input as () => unknown)();
         return input;
-      }
-    };
+      };
 
-    fieldObject.type = CinFieldType.Relation;
-    fieldObject.useDataRepository = useDataRepository;
-    fieldObject.discriminatorKey = input["discriminatorKey"]
-      ? input["discriminatorKey"]
-      : undefined;
-
-    set(object, `fields.${name.toString()}`, fieldObject);
-    setCinMetaData(object, target.constructor);
-    setCinDefaultNameField(object, name);
+      field.type = CinFieldType.Relation;
+      field.useDataRepository = useDataRepository;
+      field.discriminatorKey = discriminatorKey;
+    });
   };
 }

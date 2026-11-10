@@ -1,17 +1,11 @@
-import { setCinDefaultNameField, getCinFieldObject, getCinMetaData, setCinMetaData } from "../../utils/utils";
-import { set } from "lodash";
+import { updateCinField } from "../../utils/utils";
 import { CinFieldType } from "../../enum/cin-field-type.enum";
 
 export function CinPassword({ defaultValue }: { defaultValue?: string } = {}) {
-  return (target: {} | any, name: PropertyKey): any => {
-    let object = getCinMetaData(target.constructor) ?? {};
-    let fieldObject = getCinFieldObject(object, name);
-
-    fieldObject.type = CinFieldType.Password;
-    fieldObject.defaultValue = defaultValue;
-
-    set(object, `fields.${name.toString()}`, fieldObject);
-    setCinMetaData(object, target.constructor);
-    setCinDefaultNameField(object, name)
+  return (target: {} | any, name: PropertyKey): void => {
+    updateCinField(target, name, (field) => {
+      field.type = CinFieldType.Password;
+      field.defaultValue = defaultValue;
+    });
   };
 }

@@ -4,7 +4,7 @@ export interface CinActionInterface {
   label?: string;
   DataRepository?: unknown;
   //todo handle object type
-  run?: (...args: unknown[]) => void;
+  run?: (...args: unknown[]) => unknown;
 }
 
 export interface Actions {

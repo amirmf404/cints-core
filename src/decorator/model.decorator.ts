@@ -1,179 +1,250 @@
+import _ from "lodash";
 import { CrudModelOption } from "../interface/model-option";
 import {
   extractModelName,
-  getCinMetaData,
   pathNormalizer,
-  setCinMetaData,
+  updateCinMetaData,
 } from "../utils/utils";
-import "reflect-metadata";
-import * as _ from "lodash";
-import { set, get, unset } from "lodash";
-import {
-  CinCrudModelMetadata,
-  CinFieldMetadata,
-  CrudDataRepository,
-  PaginationOptions,
-} from "src/interface";
+import { CinCrudModelMetadata } from "../interface/cin-model-metadata.interface";
+import { CrudDataRepository } from "../interface/data-repository";
+import { PaginationOptions } from "../interface/pagination-options.interface";
 
-export function CinCrudModel(
-  options: CrudModelOption = {
-    actionOptions: { flatRowAction: false, showActions: true },
-    viewPageOptions: { enable: true },
-    updateOptions: { enable: true },
-    deleteOptions: { enable: true },
-    createOptions: { enable: true },
-  }
-) {
-  return (constructor: Function) => {
+/** Used when `@CinCrudModel()` is called without any options. */
+const DEFAULT_OPTIONS: CrudModelOption = {
+  actionOptions: { flatRowAction: false, showActions: true },
+  viewPageOptions: { enable: true },
+  updateOptions: { enable: true },
+  deleteOptions: { enable: true },
+  createOptions: { enable: true },
+};
+
+export function CinCrudModel(options: CrudModelOption = DEFAULT_OPTIONS) {
+  return (constructor: Function): void => {
     const modelName = options.name ?? extractModelName(constructor.name);
     const path = options.path ?? pathNormalizer(modelName);
-    let object = getCinMetaData(constructor) ?? {};
-    const modelMetaData = getCinMetaData(constructor);
 
-    set(object, "modelName", modelName);
-    set(object, "path", path);
-    set(object, "createOptions", options.createOptions);
-    set(object, "updateOptions", options.updateOptions);
-    set(object, "deleteOptions", options.deleteOptions);
-    set(object, "viewPageOptions", options.viewPageOptions);
-    set(object, "copyOptions", options.copyOptions);
-    set(object, "indexPageOptions", options.indexPageOptions);
-    set(
-      object,
-      "dataRepository",
-      transformDataRepository(options?.dataRepository, modelMetaData)
-    );
-    set(object, "actionOptions", options.actionOptions);
-    set(object, "selectedTable", options.selectedTable);
-    set(object, "children", options.children);
-    setCinMetaData(object, constructor);
+    updateCinMetaData(constructor, (metadata) => {
+      metadata.modelName = modelName;
+      metadata.path = path;
+      metadata.fields = metadata.fields ?? {};
+
+      // A page or action that is left out of `options` is disabled.
+      metadata.createOptions = options.createOptions ?? { enable: false };
+      metadata.updateOptions = options.updateOptions ?? { enable: false };
+      metadata.deleteOptions = options.deleteOptions ?? { enable: false };
+      metadata.viewPageOptions = options.viewPageOptions ?? { enable: false };
+      metadata.actionOptions = options.actionOptions ?? {
+        flatRowAction: false,
+        showActions: false,
+      };
+      metadata.actions = {
+        rowActions: metadata.actions?.rowActions ?? [],
+        modelActions: metadata.actions?.modelActions ?? [],
+      };
+
+      metadata.copyOptions = options.copyOptions;
+      metadata.indexPageOptions = options.indexPageOptions;
+      metadata.selectedTable = options.selectedTable;
+      metadata.children = options.children;
+      metadata.labels = [...(options.labels ?? []), ...(metadata.labels ?? [])];
+      if (options.icon !== undefined) metadata.icon = options.icon;
+
+      metadata.dataRepository = transformDataRepository(
+        options.dataRepository,
+        metadata
+      );
+    });
   };
 }
 
-function extractClassFieldPath(modelMetaData: any) {
-  return _.chain(modelMetaData.fields)
+type FieldPath = [field: string, dataPath: string];
+
+function extractClassFieldPath(modelMetaData: CinCrudModelMetadata) {
+  return Object.values(modelMetaData?.fields ?? {})
     .filter((field) => field.dataPath)
-    .map((field) => [field.name, field.dataPath])
-    .value();
+    .map((field): FieldPath => [field.name, field.dataPath]);
 }
 
-function transformObjectToClass(entity: any, mapFieldPath: any[][]) {
-  mapFieldPath.forEach(([key, value]) => {
-    const fieldValue = _.get(entity, value);
-    if (fieldValue) {
-      set(entity, key, fieldValue);
-      unset(entity, value);
+function isObject(value: unknown): value is Record<string, any> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * Sets `value` at `path` without changing any object that `root` shares with
+ * the entity it was copied from: plain objects and arrays on the way are
+ * copied before they are written to.
+ */
+function setPath(root: Record<string, any>, path: string, value: unknown) {
+  const keys = _.toPath(path);
+  let node = root;
+
+  keys.forEach((key, index) => {
+    if (index === keys.length - 1) {
+      node[key] = value;
+      return;
     }
+
+    const next = node[key];
+    if (Array.isArray(next)) node[key] = [...next];
+    else if (_.isPlainObject(next)) node[key] = { ...next };
+    else if (!isObject(next)) node[key] = /^\d+$/.test(keys[index + 1]) ? [] : {};
+
+    node = node[key];
+  });
+}
+
+/** Removes `path` and every plain object on the way that it leaves empty. */
+function unsetPath(root: Record<string, any>, path: string) {
+  const keys = _.toPath(path);
+
+  for (let length = keys.length; length > 0; length--) {
+    _.unset(root, keys.slice(0, length));
+
+    const parent = length > 1 ? _.get(root, keys.slice(0, length - 1)) : root;
+    if (parent === root || !_.isPlainObject(parent) || !_.isEmpty(parent)) {
+      return;
+    }
+  }
+}
+
+/** Moves nested payload values back onto the model fields (response side). */
+function transformObjectToClass(entity: any, mapFieldPath: FieldPath[]) {
+  if (!isObject(entity)) return entity;
+
+  mapFieldPath.forEach(([field, dataPath]) => {
+    const fieldValue = _.get(entity, dataPath);
+    if (fieldValue === undefined) return;
+
+    // Remove the nested value first: when the path starts with the field
+    // name (`company` -> `company.id`), removing it afterwards would delete
+    // a property of the value that was just assigned.
+    unsetPath(entity, dataPath);
+    entity[field] = fieldValue;
   });
   return entity;
 }
 
-function transformToObject(entity: any, mapFieldPath: any[][]) {
-  let data = entity;
-  Object.entries(entity).forEach(([key, value]) => {
-    const dataPath = mapFieldPath.find((entry) => entry[0] === key)?.[1];
-    if (dataPath) {
-      unset(data, key);
-      set(data, dataPath, value);
-    }
-  });
+/** Moves model fields to their data paths (request side). */
+function transformToObject(entity: any, mapFieldPath: FieldPath[]) {
+  if (!isObject(entity) || mapFieldPath.length === 0) return entity;
+
+  // Work on a copy, the entity usually is the form state of the caller.
+  const data = { ...entity };
+  const moved = mapFieldPath.filter(([field]) =>
+    Object.prototype.hasOwnProperty.call(entity, field)
+  );
+
+  moved.forEach(([field]) => delete data[field]);
+  moved.forEach(([field, dataPath]) => setPath(data, dataPath, entity[field]));
   return data;
 }
 
-function transformParamsField(items, mapFieldPathObject) {
-  if (items) {
-    return items.map((item) => {
-      if (mapFieldPathObject[item.field]) {
-        return { ...item, field: mapFieldPathObject[item.field] };
-      }
-      return item;
-    });
-  }
+function transformParamsField<T extends { field: string }>(
+  items: T[] | undefined,
+  mapFieldPathObject: Record<string, string>
+): T[] | undefined {
+  return items?.map((item) =>
+    mapFieldPathObject[item?.field]
+      ? { ...item, field: mapFieldPathObject[item.field] }
+      : item
+  );
 }
 
-function transformDataRepository(
-  dataRepository: CrudDataRepository,
-  modelMetaData: CinCrudModelMetadata
+function transformSortBy(
+  sortBy: string[] | undefined,
+  mapFieldPathObject: Record<string, string>
 ) {
-  const originalCreate = dataRepository?.create;
-  const originalUpdate = dataRepository?.update;
-  const originalFindById = dataRepository?.findById;
-  const originalFindPaginate = dataRepository?.findPaginate;
-  const originalDelete = dataRepository?.delete;
+  return sortBy?.map((item) => {
+    if (!item) return item;
 
-  (dataRepository ?? { create: undefined }).create = async ({ entity }) => {
-    const mapFieldPath = extractClassFieldPath(modelMetaData);
+    const isDescending = item.charAt(0) === "-";
+    const mappedField = mapFieldPathObject[isDescending ? item.slice(1) : item];
 
-    let data = transformToObject(entity, mapFieldPath);
+    if (!mappedField) return item;
+    return isDescending ? `-${mappedField}` : mappedField;
+  });
+}
 
-    const response = await originalCreate.call(dataRepository, {
-      entity: data,
-    });
+/**
+ * Returns a repository that applies the `@CinDataPath` mappings of the model
+ * around the methods of `dataRepository`. The given repository is not
+ * changed: the result delegates to it and every method is called with the
+ * original repository as `this`.
+ */
+function transformDataRepository(
+  dataRepository: CrudDataRepository | undefined,
+  modelMetaData: CinCrudModelMetadata
+): CrudDataRepository | undefined {
+  if (!dataRepository) return dataRepository;
 
-    return transformObjectToClass(response, mapFieldPath);
-  };
+  const repository: CrudDataRepository = Object.create(dataRepository);
+  const has = (method: keyof CrudDataRepository) =>
+    typeof dataRepository[method] === "function";
 
-  (dataRepository ?? { update: undefined }).update = async ({ entity }) => {
-    const mapFieldPath = extractClassFieldPath(modelMetaData);
+  if (has("create")) {
+    repository.create = async (params) => {
+      const mapFieldPath = extractClassFieldPath(modelMetaData);
 
-    let data = transformToObject(entity, mapFieldPath);
-
-    const response = await originalUpdate.call(dataRepository, {
-      entity: data,
-      id: data.id,
-    });
-
-    return transformObjectToClass(response, mapFieldPath);
-  };
-
-  (dataRepository ?? { findPaginate: undefined }).findPaginate = async (
-    params: PaginationOptions
-  ) => {
-    const mapFieldPath = extractClassFieldPath(modelMetaData);
-    const mapFieldPathObject = Object.fromEntries(mapFieldPath);
-
-    const filter = transformParamsField(params.filter, mapFieldPathObject);
-    const search = transformParamsField(params.search, mapFieldPathObject);
-    let sort;
-
-    if (params.sortBy) {
-      sort = params.sortBy.map((item) => {
-        if (!item) return;
-        const isDescending = item.charAt(0) === "-";
-        const originalString = isDescending ? item.slice(1) : item;
-        const mappedField = mapFieldPathObject[originalString];
-
-        return mappedField
-          ? isDescending
-            ? `-${mappedField}`
-            : mappedField
-          : item;
+      const response = await dataRepository.create({
+        ...params,
+        entity: transformToObject(params?.entity, mapFieldPath),
       });
-    }
 
-    const response = await originalFindPaginate.call(dataRepository, {
-      ...params,
-      filter,
-      search,
-      sortBy: sort ? sort : params.sortBy,
-    });
-    if (response.items.length <= 0) return response;
-
-    return {
-      ...response,
-      items: response.items.map((item) =>
-        transformObjectToClass(item, mapFieldPath)
-      ),
+      return transformObjectToClass(response, mapFieldPath);
     };
-  };
+  }
 
-  (dataRepository ?? { findById: undefined }).findById = async (entity) => {
-    const response = await originalFindById.call(dataRepository, entity);
+  if (has("update")) {
+    repository.update = async (params) => {
+      const mapFieldPath = extractClassFieldPath(modelMetaData);
 
-    const mapFieldPath = extractClassFieldPath(modelMetaData);
+      const response = await dataRepository.update({
+        ...params,
+        id: params?.id ?? params?.entity?.id,
+        entity: transformToObject(params?.entity, mapFieldPath),
+      });
 
-    return transformObjectToClass(response, mapFieldPath);
-  };
+      return transformObjectToClass(response, mapFieldPath);
+    };
+  }
 
-  return dataRepository;
+  if (has("findPaginate")) {
+    repository.findPaginate = async (params: PaginationOptions = {}) => {
+      const mapFieldPath = extractClassFieldPath(modelMetaData);
+      const mapFieldPathObject = Object.fromEntries(mapFieldPath);
+
+      const response = await dataRepository.findPaginate({
+        ...params,
+        filter: transformParamsField(params.filter, mapFieldPathObject),
+        search: transformParamsField(params.search, mapFieldPathObject),
+        sortBy: transformSortBy(params.sortBy, mapFieldPathObject),
+      });
+
+      if (!Array.isArray(response?.items)) return response;
+
+      return {
+        ...response,
+        items: response.items.map((item) =>
+          transformObjectToClass(item, mapFieldPath)
+        ),
+      };
+    };
+  }
+
+  if (has("findById")) {
+    repository.findById = async (params) => {
+      const response = await dataRepository.findById(params);
+
+      return transformObjectToClass(
+        response,
+        extractClassFieldPath(modelMetaData)
+      );
+    };
+  }
+
+  if (has("delete")) {
+    repository.delete = (params) => dataRepository.delete(params);
+  }
+
+  return repository;
 }

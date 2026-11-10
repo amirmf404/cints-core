@@ -1,17 +1,10 @@
-import {
-  getCinFieldObject,
-  getCinMetaData,
-  setCinMetaData,
-} from "../utils/utils";
-import { set } from "lodash";
+import { updateCinField } from "../utils/utils";
 
 export function CinFilterable(targetField?: string) {
-  return (target: {} | any, name: PropertyKey): any => {
-    let object = getCinMetaData(target.constructor) ?? {};
-    let fieldObject = getCinFieldObject(object, name);
-    fieldObject.filterable = true;
-    fieldObject.targetField = targetField;
-    set(object, `fields.${name.toString()}`, fieldObject);
-    setCinMetaData(object, target.constructor);
+  return (target: {} | any, name: PropertyKey): void => {
+    updateCinField(target, name, (field) => {
+      field.filterable = true;
+      field.targetField = targetField;
+    });
   };
 }

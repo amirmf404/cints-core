@@ -1,4 +1,4 @@
-import { cinCustomComponentRoleEnum } from "src/enum";
+import { cinCustomComponentRoleEnum } from "../enum/cin-custom-component-role.enum";
 import { CinCustomComponentInterface } from "./cin-custom-component.interface";
 
 export interface baseFomOptions {

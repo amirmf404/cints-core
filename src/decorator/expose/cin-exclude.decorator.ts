@@ -1,19 +1,12 @@
-import { CinExposeOption } from "src/types/CinExposeOption.type";
-import { CrudActionsEnum } from "../../enum/crud-actions";
+import { CinExposeOption } from "../../types/CinExposeOption.type";
 import { setExpose } from "../../utils/cin-set-expose.utils";
-import { isCrudActionEnum } from "./cin-expose.decorator";
+import { normalizeExposeOption } from "./cin-expose.decorator";
 
 export function CinExclude(
-  crudActions: CinExposeOption = Object.values(CrudActionsEnum),
+  crudActions?: CinExposeOption
 ): PropertyDecorator & ClassDecorator {
   return setExpose({
     value: false,
-    crudActions: (crudActions ?? Object.values(CrudActionsEnum).map((a) => ({ action: a }))).map((a) =>
-      isCrudActionEnum(a)
-        ? {
-            action: a,
-          }
-        : a,
-    ),
+    crudActions: normalizeExposeOption(crudActions),
   });
 }

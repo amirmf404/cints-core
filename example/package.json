@@ -1,15 +1,17 @@
 {
-  "name": "cints-example",
+  "name": "cints-core-example",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "build:lib": "npm --prefix .. install && npm --prefix .. run build",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
-  "dependencies":{
-    "@paybuy/cints-core":"file://../"
+  "dependencies": {
+    "cints-core": "file:..",
+    "yup": "^1.3.3"
   },
   "devDependencies": {
     "typescript": "^5.2.2",

@@ -7,7 +7,7 @@ import { IndexPageOptions } from "./index-page-options.interface";
 import { CrudDataRepository } from "./data-repository";
 import { CinModel } from "../model";
 import { createOptions, updateOptions } from "./cin-form-options.interface";
-import { colorHandler } from "src/types/color.type";
+import { colorHandler } from "../types/color.type";
 
 interface CinModelMetadata {
   modelName: string; //! user
@@ -29,7 +29,7 @@ export interface CinCrudModelMetadata extends CinModelMetadata {
   children?: CinModel[];
   export?: {
     enable: boolean;
-    path: string;
+    path?: string;
   };
 
   updateOptions: updateOptions;

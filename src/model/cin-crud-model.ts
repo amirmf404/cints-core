@@ -14,16 +14,16 @@ export class CinModel {
 
     this["version"] = (this["version"] || 0) + 1;
     const newClass = class extends this {};
-    const oldMetaData = _.cloneDeep(getCinMetaData(this));
+    const metaData = _.cloneDeep(getCinMetaData(this)) ?? {};
 
     Object.defineProperty(newClass, "name", {
       value: `${this.name}${this["version"]}`,
       writable: false,
     });
 
-    _.assign(oldMetaData, newMetaData);
+    _.assign(metaData, newMetaData);
 
-    setCinMetaData(oldMetaData, newClass);
+    setCinMetaData(metaData, newClass);
     return newClass;
   }
 }

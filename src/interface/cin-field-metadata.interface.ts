@@ -7,8 +7,8 @@ import { CinDateStructure } from "../enum/cin-date-structure.enum";
 import { CinModel } from "../model/cin-crud-model";
 import { CinCustomComponentInterface } from "./cin-custom-component.interface";
 import { CinTranslateEnum } from "../enum/cin-translate.enum";
-import { SeverityTypeEnum } from "src/enum/SeverityType.enum";
-import { colorHandler } from "src/types/color.type";
+import { SeverityTypeEnum } from "../enum/SeverityType.enum";
+import { colorHandler } from "../types/color.type";
 
 export interface CinBaseFieldMetadata {
   name: string;
@@ -34,6 +34,7 @@ export interface CinBaseFieldMetadata {
   tabView?: { priority: number; label: string; model: CinModel };
   section?: { priority: number; label: string };
   isArray?: boolean;
+  virtual?: boolean;
   customComponentField?: CinCustomComponentInterface;
   dataPath: string;
   presets?: Record<string, unknown> | (() => Record<string, unknown>);
@@ -62,7 +63,7 @@ export interface CinFileFieldMetadata extends CinBaseFieldMetadata {
   type: CinFieldType.File;
   fileTypeMode?: CinFileType;
   maxFileSize?: number;
-  run: Function;
+  run?: Function;
 }
 export interface CinEnumFieldMetadata extends CinBaseFieldMetadata {
   type: CinFieldType.Enum;
@@ -80,4 +81,6 @@ export type CinFieldMetadata =
   | CinTextFieldMetadata
   | CinFileFieldMetadata
   | CinRelationFieldMetadata
-  | CinObjectFieldMetadata;
+  | CinObjectFieldMetadata
+  | CinEnumFieldMetadata
+  | CinDateFieldMetadata;

@@ -1,328 +1,498 @@
-# Cints-core Documentation
+# cints-core
 
-This repo hosts the two packages that work together to ship metadata-driven CRUD admin UIs.
+Decorator-first metadata toolkit for describing CRUD models, forms, tables and actions.
 
-- `cints-core`: Decorator-first metadata toolkit. Describe models once (fields, validation, actions, visibility, layout hints) and retrieve the resulting `CinCrudModelMetadata` via `getMetaData()`.
-- `cinvue`: Vue 3 + PrimeVue component library that consumes that metadata to render forms, tables, and ready-made CRUD pages.
+You describe a model once, with decorators on a class: its fields, their types, validation, visibility, layout hints, actions and the repository that loads and saves it. `cints-core` turns that into one plain metadata object (`CinCrudModelMetadata`) that a UI layer can render. [`cinvue`](https://github.com/amirmf404/cinvue) is such a layer for Vue 3 and PrimeVue.
+
+`cints-core` has no UI and no framework dependency. It runs in the browser and in Node.
 
 ## Contents
 
-- [`cints-core` reference](./cints-core.md): Installation, model lifecycle, full decorator/API catalog with examples, enums, and repository contract.
-- [`cinvue` guide](./cinvue.md): Plugin setup, components, router builder, page props, and how `CinCrudModelMetadata` maps to the rendered UI.
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [How metadata is built](#how-metadata-is-built)
+- [Model decorator](#model-decorator-cincrudmodeloptions)
+- [Field type decorators](#field-type-decorators)
+- [Field option decorators](#field-option-decorators)
+- [Visibility](#visibility)
+- [Validation](#validation)
+- [Actions](#actions)
+- [Colors](#colors)
+- [Custom components](#custom-components)
+- [Data repository and data paths](#data-repository-and-data-paths)
+- [`CinModel`](#cinmodel)
+- [Enums](#enums)
+- [Utilities](#utilities)
+- [Example](#example)
+- [Development](#development)
 
-## Quick workflow (both packages together)
+## Installation
 
-1. Model your entities in `cints-core`:
+```bash
+npm install cints-core
+```
 
-```ts
-import "reflect-metadata";
-import { CinCrudModel, CinModel, CinId, CinText } from "cints-core";
+The decorators are TypeScript (legacy) decorators. Enable them in `tsconfig.json`:
 
-@CinCrudModel({ path: "users", dataRepository: userRepo })
-class User extends CinModel {
-  @CinId() id!: number;
-  @CinText() name!: string;
+```json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true
+  }
 }
 ```
 
-2. Render the admin UI with CinVue:
-
-```ts
-import { CinVuePlugin, CinRouterBuilder } from "cinvue";
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes: CinRouterBuilder({ routesItem: [User] }),
-});
-
-createApp(App).use(CinVuePlugin, { primeVue: PrimeVue, appRouter: router, pageLayout: Layout }).mount("#app");
-```
-
-CinVue will surface list/view pages for `User`, backed by `userRepo`. Customizations defined on the model (fields, tabs/sections, actions, validation) flow directly into the UI. Repeat for additional models to grow the admin panel consistently.
-
-# cints-core
-
-Decorator-first metadata toolkit for describing CRUD models, forms, tables, and actions. Models carry all UI hints in their class decorators and expose them through `getMetaData()`.
-
-- Depends on `reflect-metadata`; import it once at app startup.
-- Every model should extend `CinModel` and be decorated with `@CinCrudModel`.
-- Metadata is stored on the class (static). `CinModel.getMetaData()` returns a `CinCrudModelMetadata` snapshot.
+`cints-core` loads `reflect-metadata` itself, you do not have to import it.
 
 ## Quick start
 
 ```ts
-import "reflect-metadata";
 import {
-  CinCrudModel,
-  CinModel,
-  CinId,
-  CinText,
-  CinNumber,
-  CinRelation,
-  CinSearchable,
-  CinFilterable,
   CinAction,
-  CinExpose,
-  CinValidation,
-  CrudActionsEnum,
+  CinCrudModel,
+  CinEmail,
+  CinFilterable,
+  CinId,
+  CinModel,
+  CinNumber,
+  CinReadOnly,
+  CinSearchable,
+  CinText,
 } from "cints-core";
 
 @CinCrudModel({
+  name: "User",
   path: "users",
   dataRepository: userRepository, // implements CrudDataRepository
-  actionOptions: { flatRowAction: false, showActions: true },
-})
-class User extends CinModel {
-  @CinId() id!: number;
-
-  @CinText() @CinSearchable() name!: string;
-
-  @CinNumber() @CinFilterable() age!: number;
-
-  @CinRelation(() => Company) company!: Company;
-
-  @CinValidation({ [CrudActionsEnum.Create]: userCreateSchema })
-  @CinExpose([{ action: CrudActionsEnum.Create }])
-  @CinText()
-  email!: string;
-
-  @CinAction({ icon: "refresh", label: "Resync" })
-  static resync(row: User) {
-    return syncUser(row.id);
-  }
-}
-
-// Later
-const metadata = User.getMetaData();
-```
-
-## Model decorator: `@CinCrudModel(options)`
-
-- `name` defaults to the class name without a trailing `Model`; `path` defaults to kebab-case of the name.
-- Page options: `createOptions`, `updateOptions`, `deleteOptions`, `viewPageOptions`, `indexPageOptions` (grid/table modes, export options, pagination limits, toggle-mode visibility).
-- Data: `dataRepository` implements `CrudDataRepository` (`create`, `update`, `findPaginate`, `findById`, `delete`). The decorator wraps these methods to honor `CinDataPath` mappings on fields (filters/search/sort and payloads are rewritten).
-- Layout/behavior: `actionOptions` (row action layout, visibility), `copyOptions`, `selectedTable`, `children` (nested models), `export` (enable/path), `icon`, `colorHandler` (row color function).
-- Helpers on the class: `CinModel.getMetaData()` returns metadata; `CinModel.overrideMetaData(partial)` clones the class with merged metadata and bumps an internal version.
-
-## Field basics
-
-Decorate class properties to describe the UI and behavior of each field.
-
-- Identity & labeling: `CinId()`, `CinField({ label })`, `CinLabel({ priority, label })` (marks fields that identify a row).
-- Visibility: `CinExpose([actions])`, `CinExclude([actions])`, `CinReadOnly()` (exposed on view/index only).
-- Interactions: `CinSortable()`, `CinSearchable()`, `CinFilterable(targetField?)`, `CinCopyable()`, `CinArray()`, `CinVirtualField()`.
-- Layout hints: `CinTab({ label, priority })`, `CinSection({ label, priority })`, `CinTabView({ label, priority, model })`.
-- Customization: `CinCustomFieldComponent({ component, props })`, `CinColor(handler)` on a field sets a color handler; `CinPresets(data|fn)` supplies preset values; `CinDataPath(path)` maps the field to a nested key in API payloads.
-- Validation & translation: `CinValidation(schema)` accepts a Yup schema or action-specific schemas; `CinExposeTranslate()` / `CinExcludeTranslate()` toggle translation per `CinTranslateEnum`.
-
-## Field types
-
-Use one of the type decorators; each sets `type` and accepts per-type options.
-
-- Primitives: `CinText`, `CinLongText({ parser })`, `CinNumber`, `CinBoolean`, `CinCurrency`, `CinEmail`, `CinPassword`, `CinPhoneNumber`, `CinJson`.
-- Structured: `CinEnum(enumObj, severity?)`, `CinDate({ dateOptions })`, `CinFile({ fileType, maxFileSize, run, defaultValue })`.
-- Relations & nested models: `CinRelation(model | discriminatorConfig | () => model, useDataRepository?)` for references; `CinObject({ model, tableMode })` for embedded objects; `CinCustomType()` for ad-hoc renderers.
-
-Each decorator also stamps the field name/label if not already set.
-
-## Actions
-
-- `@CinAction({ icon, label, run? })` can be placed on:
-  - A static method: creates a row action; `run` calls the method with passed args.
-  - The class: creates a model action; `run` comes from the decorator `run` option.
-- Actions are grouped by `CinActionTypeEnum.rowActions` and `modelActions` in metadata.
-
-## Custom components and colors
-
-- `CinCustomComponent({ component, props })` replaces the default view/form shell for the model.
-- `CinCustomFieldComponent({ component, props })` overrides rendering for a single field (or all fields when placed on the class).
-- `CinColor(handler?)` on a method sets a row-level color handler; on a field it requires a handler argument.
-
-## Export, copy, and translate
-
-- `CinExport({ enable, path })` toggles export on the model.
-- `CinCopyable()` on the model enables copy for the whole entity; on a field it allows copying that value; `copyOptions` can provide custom serializer/deserializer.
-- Translation flags live on `field.translate` keyed by `CinTranslateEnum`.
-
-## Data path & repository behavior
-
-- `CinDataPath("nested.key")` maps a field to a nested payload key. The model decorator rewrites:
-  - `create`/`update` payloads: class properties move to the configured paths before repository calls.
-  - `findById`/`findPaginate` responses: nested values are lifted back onto the class fields.
-  - `filter`/`search`/`sortBy` options: field names are remapped to their data paths.
-
-## Utilities and types
-
-- Enums: `CinFieldType`, `CrudActionsEnum`, `CinFileType`, `CinDateStructure`, `CinEditorParser`, `FilterOperation`, `ExportMode`, `ExportType`, `IndexPageMode`, `LoadMoreMode`, `SeverityTypeEnum`, `CinTranslateEnum`.
-- Interfaces: `CinCrudModelMetadata`, `CinFieldMetadata` (and subtypes), `CrudDataRepository`, `PaginationOptions`, `IndexPageOptions`, `CinCustomComponentInterface`, `CinActionInterface`, `CopyOptions`, `LabelOptions`.
-
-## Example metadata output
-
-```ts
-const meta = User.getMetaData();
-// meta.modelName -> "User"
-// meta.path -> "users"
-// meta.fields.email.searchable -> true
-// meta.actions.rowActions[0].label -> "Resync"
-```
-
-# cints-core | Optional model icon. |
-
-| `dataRepository` | `CrudDataRepository` | | Custom serializer/deserializer for copy. |
-| `indexPageOptions` | `IndexPageOptions` | | Enables multi-select mode in CinVue tables. |
-| `children` | `CinModel[]` | s metadata. | `@CinTabView({ priority: 2, label: "Orders", model: Order }) orders` |
-| `@CinCustomComponent({ component, props })` | Model-level override for index/create/view shells. | `@CinCustomComponent({ component: CustomPage })` |
-| `@CinCustomFieldComponent({ component, props })` | Field or model-level override for input/view renderer. | `@CinCustomFieldComponent({ component: MyInput, props: { dense: true } })` |
-
-### Validation: `@CinValidation(schema)`
-
-Attach Yup schema (single schema or per-action object with `create`/`update` keys). Evaluated before submission.
-
-```ts
-@CinValidation(userSchema) email: string;
-@CinValidation({ [CrudActionsEnum.Create]: createSchema, [CrudActionsEnum.Update]: updateSchema }) age: number;
-```
-
-## Field type decorators
-
-Each sets `type` and optional defaults.
-
-| Decorator                                                  | Options                                                        | Default                                   | Notes                                       |
-| ---------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------- | --- | -------------------------------- |
-| `@CinId({ showOnIndex? })`                                 | `showOnIndex` unused flag                                      |                                           | Numeric field.                              |
-| `@CinBoolean({ defaultValue? })`                           | `boolean`                                                      |                                           | Currency value.                             |
-| `@CinEmail({ defaultValue? })`                             | `boolean` (metadata holds value)                               |                                           | Password input.                             |
-| `@CinPhoneNumber({ defaultValue? })`                       | `number`                                                       |                                           | JSON editor/viewer.                         |
-| `@CinEnum(enumObj, severity?, { defaultValue? })`          | `severity: SeverityTypeEnum`                                   | `SeverityTypeEnum.null`                   | Enum select with optional severity styling. |
-| `@CinDate({ defaultValue?, dateOptions })`                 | `dateOptions: CinDateStructure`                                | `CinDateStructure.Date`                   | Date/time picker formats.                   |
-| `@CinFile({ defaultValue?, fileType, maxFileSize, run? })` | `fileType: CinFileType`, `maxFileSize: number`, optional `run` | `fileType: ALL`, `maxFileSize: 1_000_000` | File upload handler.                        |
-| `@CinRelation(model                                        | discriminatorConfig                                            | () => model, useDataRepository?)`         | See below                                   |     | Embedded object/array rendering. |
-| `@CinCustomType()`                                         |                                                                | Mark field for custom renderer.           |
-
-**CinRelation discriminator config**:
-
-```ts
-@CinRelation({
- discriminatorKey: "type",
- fallbackValue: Guest,
- discriminators: { admin: AdminModel, staff: StaffModel },
-})
-role;
-```
-
-## Enums quick reference
-
-- `CrudActionsEnum`: `create`, `update`, `view`, `index`, `delete`
-- `CinFieldType`: `Boolean`, `Number`, `Currency`, `Text`, `LongText`, `File`, `Identifier`, `PhoneNumber`, `Enum`, `Date`, `Password`, `Json`, `Array`, `Relation`, `Object`, `Email`, `custom`
-- `CinEditorParser`: `RAW`, `JSON`, `HTML`
-- `CinDateStructure`: `DateTimeFa`, `DateTime`, `DateFa`, `Date`
-- `CinFileType`: `ALL`, `IMAGE`, `VIDEO`, `AUDIO` (plus any values defined in enum)
-- `SeverityTypeEnum`: `success`, `info`, `warning`, `danger`, `null`
-- `IndexPageMode`: `Grid`, `Table`
-- `LoadMoreMode`: `INFINITY_SCROLL`, `PAGINATION`
-- `ExportMode`: `Local`, `Server`
-- `ExportType`: `PDF`, `CSV`, `EXCEL`
-- `FilterOperation`: `IN`, `NOT_IN`, `BETWEEN`, `NOT_BETWEEN`, `EQ`, `GT`, `GTE`, `LT`, `LTE`, `NE`, `LIKE`, `ILIKE`, `IREGEXP`, `NOT_ILIKE`, `NOT_IREGEXP`, `NOT_LIKE`, `REGEXP`, `NOT_REGEXP`, `IS`, `NOT`, `ELM_MTC`
-
-## Putting it together (comprehensive example)
-
-```ts
-import "reflect-metadata";
-import {
-  CinCrudModel,
-  CinModel,
-  CinId,
-  CinText,
-  CinEnum,
-  CinBoolean,
-  CinDate,
-  CinRelation,
-  CinExpose,
-  CinExclude,
-  CinSearchable,
-  CinFilterable,
-  CinSortable,
-  CinValidation,
-  CinDataPath,
-  CinTab,
-  CinSection,
-  CinAction,
-  CinColor,
-  CinPresets,
-  CrudActionsEnum,
-  CinDateStructure,
-  CinFile,
-  CinFileType,
-} from "cints-core";
-
-enum Status {
-  Active = "active",
-  Suspended = "suspended",
-}
-
-@CinCrudModel({
-  path: "users",
-  dataRepository: userRepo, // implements CrudDataRepository
-  indexPageOptions: {
-    mode: IndexPageMode.Table,
-    loadMoreMode: LoadMoreMode.PAGINATION,
-    limitOptions: { enabled: true, default: 20 },
-    exportOptions: { enabled: true, mode: ExportMode.Server, type: [ExportType.CSV, ExportType.EXCEL] },
-  },
+  createOptions: { enable: true },
+  updateOptions: { enable: true },
+  deleteOptions: { enable: true },
+  viewPageOptions: { enable: true },
   actionOptions: { flatRowAction: false, showActions: true },
 })
 export class User extends CinModel {
-  @CinId() id!: number;
+  @CinReadOnly()
+  @CinId()
+  id!: number;
 
-  @CinField({ label: "Full Name" })
   @CinSearchable()
-  @CinSortable()
-  @CinTab({ priority: 0, label: "Profile" })
-  @CinSection({ priority: 0, label: "Basics" })
+  @CinText()
   name!: string;
 
-  @CinEnum(Status, undefined, { defaultValue: Status.Active })
-  @CinFilterable()
-  @CinPresets({ Active: Status.Active, Suspended: Status.Suspended })
-  status!: Status;
-
-  @CinDate({ dateOptions: CinDateStructure.Date })
-  @CinFilterable()
-  @CinSortable()
-  joinedAt!: string;
-
-  @CinRelation(() => Company, true)
-  @CinDataPath("company.id")
-  company!: Company;
-
-  @CinFile({ fileType: CinFileType.IMAGE, maxFileSize: 2_000_000 })
-  avatar!: File;
-
-  @CinBoolean()
-  @CinExpose([{ action: CrudActionsEnum.View }, { action: CrudActionsEnum.Index }])
-  @CinExclude([{ action: CrudActionsEnum.Create }]) // hidden on create
-  verified!: boolean;
-
-  @CinValidation({
-    [CrudActionsEnum.Create]: createUserSchema,
-    [CrudActionsEnum.Update]: updateUserSchema,
-  })
+  @CinEmail()
   email!: string;
 
-  @CinAction({ icon: "pi pi-sync", label: "Sync" })
+  @CinFilterable()
+  @CinNumber({ defaultValue: 18 })
+  age!: number;
+
+  @CinAction({ icon: "pi pi-refresh", label: "Resync" })
   static resync(row: User) {
     return syncUser(row.id);
   }
+}
 
-  @CinColor((user) => (user.status === Status.Suspended ? "red" : undefined))
-  statusColor!: string;
+const metadata = User.getMetaData();
+
+metadata.modelName; // "User"
+metadata.path; // "users"
+metadata.fields.name.searchable; // true
+metadata.fields.age.defaultValue; // 18
+metadata.actions.rowActions[0].label; // "Resync"
+```
+
+A complete, runnable version is in [`example/`](./example).
+
+## How metadata is built
+
+- A model is a class that extends `CinModel` and has `@CinCrudModel`. Every decorator writes into one metadata object that is stored on the class. `Model.getMetaData()` returns it.
+- **A field exists as soon as it has one decorator.** Every field decorator registers the field in `metadata.fields` and gives it a `name` and a `label` (both default to the property name). A property without any decorator is not part of the metadata.
+- **Decorators can be written in any order.** The one exception is described under [Visibility](#visibility): when two decorators set the visibility of the same action, the one closest to the property wins.
+- **Metadata is not inherited.** A subclass of a model starts with empty metadata, it does not get the fields of its parent. Give the subclass its own decorators, or use [`overrideMetaData`](#cinmodel) to derive a variant of a model.
+- **Set `name` and `path` in production builds.** Their defaults come from the class name, and a minifier may rename classes.
+
+## Model decorator: `@CinCrudModel(options)`
+
+| Option             | Type                                              | Description                                                                                              |
+| ------------------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `name`             | `string`                                          | Model name. Default: the class name without a trailing `Model` (`UserModel` → `User`).                   |
+| `path`             | `string`                                          | Route or API path. Default: the name in kebab-case (`UserProfile` → `user-profile`).                     |
+| `icon`             | `string`                                          | Icon of the model.                                                                                       |
+| `dataRepository`   | `CrudDataRepository`                              | Loads and saves the entities. See [Data repository](#data-repository-and-data-paths).                    |
+| `createOptions`    | `{ enable, customComponent?, createRoute?, fullScreen?, role? }` | Create form.                                                                              |
+| `updateOptions`    | the same, plus `getValue?`                        | Update form. `getValue` asks the UI to load the entity with `findById` before editing.                   |
+| `deleteOptions`    | `{ enable }`                                      | Delete action.                                                                                           |
+| `viewPageOptions`  | `{ enable, customComponent? }`                    | View page.                                                                                               |
+| `actionOptions`    | `{ flatRowAction, showActions }`                  | Whether row actions are shown, and whether they are shown flat or in a menu.                             |
+| `indexPageOptions` | `IndexPageOptions`                                | List page: `mode`, `loadMoreMode`, `enableToggleMode`, `showIndex`, `limitOptions`, `exportOptions`, `defaultSortBy`. |
+| `copyOptions`      | `CopyOptions`                                     | `enabled`, `serializer`, `deSerializer` for copying an entity.                                           |
+| `labels`           | `LabelOptions[]`                                  | Labels of the model, placed before the ones added with `@CinLabel`.                                      |
+| `selectedTable`    | `boolean`                                         | Whether rows of the list can be selected.                                                                |
+| `children`         | `CinModel[]`                                      | Child models shown with an entity.                                                                       |
+
+**Defaults.** The two ways of leaving options out behave differently:
+
+- `@CinCrudModel()` without an argument enables everything: create, update, delete, view and row actions.
+- `@CinCrudModel({ ... })` with an options object enables only what the object enables. A page that is left out is stored as `{ enable: false }`, and a missing `actionOptions` as `{ flatRowAction: false, showActions: false }`.
+
+After `@CinCrudModel` has run, `fields`, `labels`, `actions`, `createOptions`, `updateOptions`, `deleteOptions`, `viewPageOptions` and `actionOptions` are always present in the metadata.
+
+Other class decorators:
+
+| Decorator                                        | Effect                                                                                  |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `@CinExport({ enable?, path? })`                 | Sets `metadata.export`. `enable` defaults to `true`.                                    |
+| `@CinCopyable()`                                 | Sets `metadata.copyable`.                                                               |
+| `@CinCustomComponent({ component, props? })`     | Sets `metadata.customComponent`, a replacement for the default view of the model.       |
+| `@CinCustomFieldComponent({ component, props? })` | Sets `metadata.customComponentField`, the default field component of the model.        |
+| `@CinExpose()`, `@CinExclude()`, `@CinReadOnly()` | Set the visibility of every field. See [Visibility](#visibility).                      |
+| `@CinExposeTranslate()`, `@CinExcludeTranslate()` | Set the translate flag of every field.                                                 |
+| `@CinAction({ ... })`                            | Adds a model action. See [Actions](#actions).                                           |
+
+## Field type decorators
+
+Each one sets `field.type`. Use one per field.
+
+| Decorator                                              | `field.type`  | Options and what they set                                                                                                     |
+| ------------------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `@CinId()`                                             | `identifier`  |                                                                                                                               |
+| `@CinText({ defaultValue? })`                          | `text`        | `defaultValue: string`                                                                                                        |
+| `@CinLongText({ defaultValue?, parser? })`             | `longtext`    | `parser: CinEditorParser` → `field.textEditorParser`. Default `RAW`.                                                          |
+| `@CinNumber({ defaultValue? })`                        | `number`      | `defaultValue: number`                                                                                                        |
+| `@CinCurrency({ defaultValue? })`                      | `currency`    | `defaultValue: number \| string`                                                                                              |
+| `@CinBoolean({ defaultValue? })`                       | `boolean`     | `defaultValue: boolean`                                                                                                       |
+| `@CinEmail({ defaultValue? })`                         | `email`       | `defaultValue: string`                                                                                                        |
+| `@CinPassword({ defaultValue? })`                      | `password`    | `defaultValue: string`                                                                                                        |
+| `@CinPhoneNumber({ defaultValue? })`                   | `phonenumber` | `defaultValue: number \| string`                                                                                              |
+| `@CinJson({ defaultValue? })`                          | `json`        | `defaultValue: string`                                                                                                        |
+| `@CinDate({ defaultValue?, dateOptions? })`            | `date`        | `dateOptions: CinDateStructure` → `field.dateOptions`. Default `Date`.                                                        |
+| `@CinEnum(enumObject, severity?, { defaultValue? })`   | `enum`        | `enumObject` → `field.enumOptions`. `severity: SeverityTypeEnum` → `field.Severity`. Default `SeverityTypeEnum.null`.         |
+| `@CinFile({ defaultValue?, fileType?, maxFileSize?, run? })` | `file`  | `fileType: CinFileType` → `field.fileTypeMode` (default `ALL`). `maxFileSize` in bytes (default `1000000`). `run` is the upload handler. |
+| `@CinRelation(model, useDataRepository?)`              | `relation`    | A reference to another model. See below.                                                                                      |
+| `@CinObject({ model, tableMode? })`                    | `object`      | An embedded object described by `model` → `field.reference`. `tableMode` defaults to `false`.                                 |
+| `@CinCustomType()`                                     | `custom`      | A field that is rendered by a custom component.                                                                               |
+
+All `defaultValue` options set `field.defaultValue`.
+
+### `@CinRelation`
+
+The first argument is one of:
+
+```ts
+// A function that returns the model. Use this form: the model is only read
+// when it is needed, so two models can refer to each other.
+@CinRelation(() => Company)
+company!: number;
+
+// The model itself.
+@CinRelation(Company)
+company!: number;
+
+// A model that depends on the row.
+@CinRelation({
+  discriminatorKey: "ownerType",
+  discriminators: { user: User, company: Company },
+  fallbackValue: User,
+})
+owner!: number;
+```
+
+`field.reference` is always a function: `field.reference(row)` returns the model. With a discriminator it returns `discriminators[row[discriminatorKey]]`, or `fallbackValue` when there is no match or no row. `field.discriminatorKey` holds the key.
+
+`useDataRepository` is stored as `field.useDataRepository`, a flag for the UI layer. `cints-core` does not use it.
+
+## Field option decorators
+
+| Decorator                                  | Effect on the field                                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `@CinField({ label? })`                    | Registers the field. Sets `label` when it is given.                                                 |
+| `@CinLabel({ priority?, label? })`         | Adds `{ priority, label }` to `metadata.labels`. `label` defaults to the property name. The labels tell the UI which fields represent an entity, for example where a relation points to it. |
+| `@CinSortable()`                           | `sortable = true`                                                                                   |
+| `@CinSearchable()`                         | `searchable = true`                                                                                 |
+| `@CinFilterable(targetField?)`             | `filterable = true`, `targetField` is the field to filter on when it differs.                       |
+| `@CinCopyable()`                           | `copyable = true`                                                                                   |
+| `@CinArray()`                              | `isArray = true`: the field holds a list of values of its type.                                     |
+| `@CinVirtualField()`                       | `virtual = true`: the field is not a stored property of the entity.                                 |
+| `@CinTab({ label, priority? })`            | `tab = { label, priority }`. `priority` defaults to `0`.                                            |
+| `@CinSection({ label, priority? })`        | `section = { label, priority }`                                                                     |
+| `@CinTabView({ label, model, priority? })` | `tabView = { label, model, priority }`                                                              |
+| `@CinPresets(data \| () => data)`          | `presets`: named preset values, for example quick filters.                                          |
+| `@CinDataPath(path)`                       | `dataPath`: where the value lives in the API payload. See [Data paths](#data-repository-and-data-paths). |
+| `@CinCustomFieldComponent({ component, props? })` | `customComponentField`: a component that renders this field.                                 |
+| `@CinColor(handler)`                       | `colorHandler`. See [Colors](#colors).                                                              |
+| `@CinValidation(schema)`                   | `validation`. See [Validation](#validation).                                                        |
+| `@CinExposeTranslate()`, `@CinExcludeTranslate()` | `translate.enable = true` or `false`.                                                        |
+
+## Visibility
+
+`field.expose` says on which CRUD actions a field is shown. The actions are `CrudActionsEnum.Create`, `Update`, `View`, `Index` and `Delete`.
+
+| Decorator               | Effect                                                                                 |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `@CinExpose(actions?)`  | Marks the field as shown on the given actions. Without an argument: on all actions.    |
+| `@CinExclude(actions?)` | Marks the field as hidden on the given actions. Without an argument: on all actions.   |
+| `@CinReadOnly()`        | Hidden on create and update, shown on view and index.                                  |
+
+An item of `actions` is an action, or an action with a condition on the form value:
+
+```ts
+@CinExclude([CrudActionsEnum.Index])
+@CinExpose([
+  { action: CrudActionsEnum.Update, condition: (form) => form.isAdmin === true },
+])
+@CinText()
+secretNote!: string;
+
+metadata.fields.secretNote.expose;
+// {
+//   index:  { expose: false, condition: undefined },
+//   update: { expose: true,  condition: [Function] },
+// }
+```
+
+Rules:
+
+- An action that no decorator mentions has no entry in `field.expose`. A UI should treat a missing entry as "shown".
+- The first value set for an action is kept. Decorators are applied from the one closest to the property upwards, so when two decorators name the same action, the lower one wins.
+- On a class, the three decorators apply to every field, without replacing what a field has set itself.
+
+The translate decorators follow the same rules for `field.translate`.
+
+## Validation
+
+`@CinValidation` stores a schema on `field.validation`. `cints-core` does not run it, the UI does. Pass one schema for both forms, or one per form:
+
+```ts
+import { string } from "yup";
+
+@CinValidation(string().required())
+@CinText()
+name!: string;
+
+@CinValidation({
+  [CrudActionsEnum.Create]: string().email().required(),
+  [CrudActionsEnum.Update]: string().email(),
+})
+@CinEmail()
+email!: string;
+```
+
+## Actions
+
+`@CinAction({ icon, label?, name?, run? })` adds an action to `metadata.actions`.
+
+```ts
+// On the class: a model action. `run` is required to make it do something.
+@CinAction({
+  name: "import",
+  icon: "pi pi-upload",
+  label: "Import",
+  run: () => importUsers(),
+})
+@CinCrudModel()
+export class User extends CinModel {
+  // On a static method: a row action. The method is called with the
+  // arguments the UI passes, usually the row.
+  @CinAction({ icon: "pi pi-ban", label: "Suspend" })
+  static suspend(row: User) {
+    return suspendUser(row.id);
+  }
+}
+
+const { rowActions, modelActions } = User.getMetaData().actions;
+rowActions[0].run(row); // calls User.suspend(row)
+modelActions[0].run(); // calls the run option
+```
+
+- Each action is stored as `{ name, icon, label, run, DataRepository }`. `name` is the method name for a row action. `DataRepository` is the model class.
+- Inside `run` and inside the static method, `this` is the model class.
+- The decorator throws when it is used on an instance method.
+
+## Colors
+
+`@CinColor` has two uses:
+
+```ts
+export class User extends CinModel {
+  // On a field: the handler is required. Sets field.colorHandler.
+  @CinColor((row) => (row.status === "suspended" ? "red" : "green"))
+  @CinText()
+  status!: string;
+
+  // On a method: no argument. The method becomes metadata.colorHandler,
+  // the color of the whole row.
+  @CinColor()
+  static rowColor(row: User) {
+    return row.isAdmin ? "gold" : "white";
+  }
 }
 ```
 
-Read the metadata anywhere:
+A handler receives the row and returns a `Color`: a named color, `#hex`, `rgb(...)` or `rgba(...)`. The decorator throws when a field has no handler, or a method has one.
+
+## Custom components
+
+`CinCustomComponentInterface` is `{ component, props? }`. `cints-core` only stores it, so `component` can be anything the UI layer understands.
+
+- `@CinCustomComponent(...)` on the class sets `metadata.customComponent`.
+- `@CinCustomFieldComponent(...)` on a field sets `field.customComponentField`, on the class it sets `metadata.customComponentField`.
+- `createOptions`, `updateOptions` and `viewPageOptions` each accept a `customComponent`. For the forms, `role` (`cinCustomComponentRoleEnum.MODAL` or `FORM`) says how the component is used.
+
+## Data repository and data paths
+
+A repository implements `CrudDataRepository`:
 
 ```ts
-const meta = User.getMetaData();
-console.log(meta.fields.email.validation); // yup schemas
-console.log(meta.actions.rowActions); // [{ label: "Sync", ... }]
+interface CrudDataRepository<T> {
+  create({ entity, parent? }): any;
+  findById({ id, parent? }): any;
+  findPaginate(options: PaginationOptions): Promise<Pagination<T>>;
+  update({ id, entity, parent? }): any;
+  delete({ id, parent? }): any;
+}
+
+interface PaginationOptions {
+  id?: string | number;
+  sortBy?: string[]; // "name" ascending, "-name" descending
+  limit?: number;
+  page?: number;
+  filter?: FilterOption[]; // { field, operation: FilterOperation, value }
+  search?: FilterOption[];
+  parent?: Record<any, any>;
+}
+
+interface Pagination<T> extends PaginationOptions {
+  items: T[];
+  itemCount: number;
+  pageCount?: number;
+}
 ```
+
+`parent` is the parent entity when the model is used as a child of another model.
+
+### Data paths
+
+`@CinDataPath` maps a field to a nested key of the API payload:
+
+```ts
+@CinDataPath("profile.fullName")
+@CinText()
+fullName!: string;
+```
+
+Always call the repository through the metadata. `metadata.dataRepository` is a wrapper around the repository you passed, and it applies the mappings in both directions:
+
+| Call                 | What the wrapper does                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `create`, `update`   | Sends `{ profile: { fullName } }` instead of `{ fullName }`. Maps the response back.           |
+| `findById`           | Maps the response back: `{ profile: { fullName } }` becomes `{ fullName }`.                    |
+| `findPaginate`       | Rewrites the field names in `filter`, `search` and `sortBy`. Maps every item of the response back. |
+| `delete`             | Passed through.                                                                                |
+
+```ts
+const repository = User.getMetaData().dataRepository;
+
+await repository.create({ entity: { fullName: "Ada" } });
+// your repository receives { entity: { profile: { fullName: "Ada" } } }
+// and the result is again { id: 1, fullName: "Ada" }
+
+await repository.findPaginate({ sortBy: ["-fullName"] });
+// your repository receives { sortBy: ["-profile.fullName"] }
+```
+
+Details:
+
+- The repository you passed is not changed. Calling it directly skips the mappings.
+- The entity you pass to `create` or `update` is not changed either, the wrapper sends a copy.
+- `update` passes `id` on. When `id` is missing, it uses `entity.id`.
+- All other parameters, such as `parent`, are passed on unchanged.
+- The wrapped methods are `async`, whatever the originals return.
+- Your methods are called with your repository as `this`.
+
+## `CinModel`
+
+| Static method               | Description                                                                                                 |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `getMetaData()`             | Returns the `CinCrudModelMetadata` of the class, or `undefined` when the class has no decorators.           |
+| `overrideMetaData(partial)` | Returns a new subclass whose metadata is a deep copy of the metadata of this class with the top-level keys of `partial` replaced. The class itself is not changed. With `null` or `undefined` it returns the class itself. |
+
+```ts
+const ReadOnlyUser = User.overrideMetaData({
+  path: "read-only-users",
+  createOptions: { enable: false },
+  updateOptions: { enable: false },
+  deleteOptions: { enable: false },
+});
+
+ReadOnlyUser.getMetaData().path; // "read-only-users"
+User.getMetaData().path; // "users"
+```
+
+## Enums
+
+| Enum                         | Members                                                                                              |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `CrudActionsEnum`            | `Create`, `Update`, `View`, `Index`, `Delete`                                                        |
+| `CinFieldType`               | `Boolean`, `Number`, `Currency`, `Text`, `LongText`, `File`, `Identifier`, `PhoneNumber`, `Enum`, `Date`, `Password`, `Json`, `Array`, `Relation`, `Object`, `Email`, `custom` |
+| `CinEditorParser`            | `RAW`, `HTML`, `MARKDOWN`                                                                            |
+| `CinDateStructure`           | `Date` (`YYYY/MM/DD`), `DateTime` (`YYYY/M/D HH:mm:ss`), `DateFa` (`jYYYY/jMM/jDD`), `DateTimeFa` (`jYYYY/jMM/jDD HH:mm:ss`) |
+| `CinFileType`                | `ALL`, `IMAGE`, `VIDEO`, `PDF`, `TXT`, `EXCEL`                                                       |
+| `SeverityTypeEnum`           | `success`, `info`, `warning`, `danger`, `null` (the string `"null"`: no severity)                    |
+| `CinActionTypeEnum`          | `rowActions`, `modelActions`                                                                         |
+| `CinTranslateEnum`           | `Enable`                                                                                             |
+| `cinCustomComponentRoleEnum` | `MODAL`, `FORM`                                                                                      |
+| `IndexPageMode`              | `Grid`, `Table`                                                                                      |
+| `LoadMoreMode`               | `INFINITY_SCROLL`, `PAGINATION`                                                                      |
+| `ExportMode`                 | `Local`, `Server`                                                                                    |
+| `ExportType`                 | `PDF`, `CSV`, `EXCEL`                                                                                |
+| `FilterOperation`            | `IN`, `NOT_IN`, `BETWEEN`, `NOT_BETWEEN`, `EQ`, `GT`, `GTE`, `LT`, `LTE`, `NE`, `LIKE`, `ILIKE`, `IREGEXP`, `NOT_ILIKE`, `NOT_IREGEXP`, `NOT_LIKE`, `REGEXP`, `NOT_REGEXP`, `IS`, `NOT`, `ELM_MTC` |
+| `CinCrudValidation`          | `STRING`, `NUMBER`, `EMAIL`, `DATE`, `REQUIRED`, `INT`                                               |
+
+## Utilities
+
+These are exported for UI layers and for writing your own decorators.
+
+| Function                                  | Description                                                                                         |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `getCinMetaData(model)`                   | The metadata of a class, the same as `model.getMetaData()`.                                         |
+| `setCinMetaData(metadata, model)`         | Stores a metadata object on a class.                                                                |
+| `updateCinMetaData(target, update)`       | Loads the metadata of the class that owns a decorator target, calls `update(metadata)`, stores it.  |
+| `updateCinField(target, name, update)`    | Registers the field and calls `update(field, metadata)`.                                            |
+| `applyDecorators(...decorators)`          | Combines decorators into one.                                                                       |
+| `setExpose(...)`, `setTranslate(...)`     | The building blocks of the visibility and translate decorators.                                     |
+| `isClass(value)`, `isFunction(value)`     | Tell a class from a plain function, for example to resolve `() => Model`.                           |
+| `extractModelName(name)`, `pathNormalizer(name)` | The defaults of `name` and `path`.                                                           |
+
+A custom field decorator:
+
+```ts
+import { updateCinField } from "cints-core";
+
+export function Placeholder(text: string) {
+  return (target: object, name: string | symbol) => {
+    updateCinField(target, name, (field) => {
+      field.customComponentField = { component: "input", props: { placeholder: text } };
+    });
+  };
+}
+```
+
+## Example
+
+[`example/`](./example) is a small Vite app with three models and an in-memory repository. It shows the metadata of each model and runs every repository call through it.
+
+```bash
+npm install && npm run build   # build cints-core
+cd example
+npm install
+npm run dev
+```
+
+## Development
+
+```bash
+npm install
+npm run build   # writes dist/ (JavaScript) and dist/index.d.ts (types)
+```
+
+Changes are listed in [`change-log.md`](./change-log.md).

@@ -1,17 +1,9 @@
-import { getCinFieldObject, getCinMetaData, setCinMetaData } from "../utils/utils";
-import { set } from "lodash";
+import { updateCinField } from "../utils/utils";
 
 export function CinField({ label }: { label?: string } = {}) {
-  return (target: {} | any, name: PropertyKey): any => {
-    let object = getCinMetaData(target.constructor) ?? {};
-    let fieldObject = getCinFieldObject(object, name);
-
-
-    fieldObject.name = name.toString();
-    fieldObject.label = label ?? fieldObject.name;
-    
-    set(object, `fields.${name.toString()}`, fieldObject);
-
-    setCinMetaData(object, target.constructor);
+  return (target: {} | any, name: PropertyKey): void => {
+    updateCinField(target, name, (field) => {
+      if (label !== undefined) field.label = label;
+    });
   };
 }

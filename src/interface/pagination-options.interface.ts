@@ -1,4 +1,3 @@
-import { ExecSyncOptionsWithStringEncoding } from "child_process";
 import { FilterOption } from "./filter-option.interface";
 
 //TODO offset

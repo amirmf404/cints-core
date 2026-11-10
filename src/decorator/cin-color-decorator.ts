@@ -1,37 +1,37 @@
-// import { set } from "lodash";
-// import { CinModelIconOptions } from "../interface";
-// import { CinModel, getCinFieldObject, getCinMetaData, setCinMetaData } from "@paybuy/cints-core";
-import { CinCrudModelMetadata } from "src/interface";
-import { colorHandler } from "src/types/color.type";
-import { getCinFieldObject, getCinMetaData, setCinMetaData } from "src/utils";
-import { set } from "lodash";
+import { colorHandler } from "../types/color.type";
+import { updateCinField, updateCinMetaData } from "../utils/utils";
 
+/**
+ * On a field: `handler` is required and becomes the field color handler.
+ * On a method: the method itself becomes the row color handler of the model
+ * and `handler` must not be passed.
+ */
 export function CinColor(handler?: colorHandler) {
   return function (
-    target: unknown,
-    name?: string,
+    target: {} | any,
+    name: PropertyKey,
     descriptor?: PropertyDescriptor
-  ) {
-    const object =
-      getCinMetaData(target.constructor) || ({} as CinCrudModelMetadata);
-
-    if (descriptor == undefined) {
-      if (handler == undefined)
+  ): void {
+    if (descriptor === undefined) {
+      if (handler === undefined)
         throw new Error(
           "A handler must be defined when using the decorator on a field"
         );
-      let fieldObject = getCinFieldObject(object, name);
-      fieldObject.colorHandler = handler;
-      set(object, `fields.${name.toString()}`, fieldObject);
-    } else {
-      if (handler != undefined)
-        throw new Error(
-          "Handler must not be defined when a decorator is used on a method"
-        );
 
-      object.colorHandler = (...args: any[]) =>
-        descriptor?.value.apply(target, args);
+      updateCinField(target, name, (field) => {
+        field.colorHandler = handler;
+      });
+      return;
     }
-    setCinMetaData(object, target.constructor);
+
+    if (handler !== undefined)
+      throw new Error(
+        "Handler must not be defined when a decorator is used on a method"
+      );
+
+    updateCinMetaData(target, (metadata) => {
+      metadata.colorHandler = (...args: [object]) =>
+        descriptor.value.apply(target, args);
+    });
   };
 }

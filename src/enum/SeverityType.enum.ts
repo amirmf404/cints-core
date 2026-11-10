@@ -3,5 +3,5 @@ export enum SeverityTypeEnum {
   success = "success",
   info = "info",
   warning = "warning",
-  null = null,
+  null = "null",
 }

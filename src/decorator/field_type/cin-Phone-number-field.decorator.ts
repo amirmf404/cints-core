@@ -1,20 +1,11 @@
-import { setCinDefaultNameField, getCinFieldObject, getCinMetaData, setCinMetaData } from "../../utils/utils";
-import { set } from "lodash";
+import { updateCinField } from "../../utils/utils";
 import { CinFieldType } from "../../enum/cin-field-type.enum";
 
-export function CinPhoneNumber({
-  defaultValue,
-}: { defaultValue?: number } = {}) {
-  return (target: {} | any, name: PropertyKey): any => {
-    let object = getCinMetaData(target.constructor) ?? {};
-    let fieldObject = getCinFieldObject(object, name);
-
-    fieldObject.type = CinFieldType.PhoneNumber;
-    fieldObject.defaultValue = defaultValue;
-    
-    
-    set(object, `fields.${name.toString()}`, fieldObject);
-    setCinMetaData(object, target.constructor);
-    setCinDefaultNameField(object, name)
-};
+export function CinPhoneNumber({ defaultValue }: { defaultValue?: number | string } = {}) {
+  return (target: {} | any, name: PropertyKey): void => {
+    updateCinField(target, name, (field) => {
+      field.type = CinFieldType.PhoneNumber;
+      field.defaultValue = defaultValue;
+    });
+  };
 }

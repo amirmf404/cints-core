@@ -10,15 +10,13 @@
       "compress": true
     },
     "target": "es2021",
-    "paths": {
-      "@routes/*": ["./../../routes/*"],
-      "@middlewares/*": ["./../../middlewares/*"]
-    },
     "baseUrl": "."
   },
   "module": {
-    "type": "es6"
+    "type": "es6",
+    "resolveFully": true
   },
-
-  "exclude": ["example/**"]
+  "exclude": [
+    "example/**"
+  ]
 }

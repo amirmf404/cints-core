@@ -1,19 +1,21 @@
-import { chain } from "lodash";
-import { CrudActionsEnum } from "../enum/crud-actions";
-import { getCinFieldObject, getCinMetaData, setCinMetaData } from "./utils";
-import { CinCrudModelMetadata } from "../interface/cin-model-metadata.interface";
+import { updateCinField, updateCinMetaData } from "./utils";
+import { CinFieldMetadata } from "../interface/cin-field-metadata.interface";
 import { CinTranslateEnum } from "../enum/cin-translate.enum";
 
-function exposeComponent(field, translate, value) {
+function setFieldTranslate(
+  field: CinFieldMetadata,
+  translate: CinTranslateEnum[],
+  value: boolean
+) {
   field.translate = field.translate ?? {};
 
-  chain(translate)
-    .difference(Object.keys(field.translate))
-    .forEach((c) => {
-      field.translate[c] = value;
-    })
-    .value();
+  for (const key of translate) {
+    // The first value set for a key wins, see `setFieldExpose`.
+    if (key in field.translate) continue;
+    field.translate[key] = value;
+  }
 }
+
 export function setTranslate({
   value,
   translate,
@@ -22,18 +24,17 @@ export function setTranslate({
   translate: CinTranslateEnum[];
 }) {
   return (target: {} | any, name?: PropertyKey): void => {
-    const objectTarget = name ? target.constructor : target;
-    const object = getCinMetaData(objectTarget) ?? ({} as CinCrudModelMetadata);
-
-    if (!name) {
-      for (const field of Object.values(object.fields ?? [])) {
-        exposeComponent(field, translate, value);
-      }
-    } else {
-      const field = getCinFieldObject(object, name);
-
-      exposeComponent(field, translate, value);
+    if (name === undefined) {
+      updateCinMetaData(target, (metadata) => {
+        for (const field of Object.values(metadata.fields ?? {})) {
+          setFieldTranslate(field, translate, value);
+        }
+      });
+      return;
     }
-    setCinMetaData(object, objectTarget);
+
+    updateCinField(target, name, (field) => {
+      setFieldTranslate(field, translate, value);
+    });
   };
 }
