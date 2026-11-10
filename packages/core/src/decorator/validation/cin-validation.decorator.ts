@@ -1,5 +1,5 @@
 import { CrudActionsEnum } from "../../enum/crud-actions";
-import { AnyObject } from "yup";
+import { AnyObject } from "../../types/any-object.type";
 import { updateCinField } from "../../utils/utils";
 
 export function CinValidation(

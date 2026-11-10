@@ -21,8 +21,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "lodash": "^4.17.21",
-    "yup": "^1.3.3"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@swc/cli": "^0.1.62",

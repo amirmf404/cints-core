@@ -28,6 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Removed
 
 - `reflect-metadata` dependency of `@metacrud/core`. Model metadata is kept in an internal `WeakMap` keyed by the class, so two classes with the same name no longer share a key, and apps do not need the polyfill.
+- `yup` dependency of `@metacrud/core`. The core only used its `AnyObject` type, which is now its own exported type. Validation schemas from Yup work as before; apps that use Yup install it themselves.
 - The npm lockfiles (`package-lock.json`). The workspace uses pnpm.
 
 ## History of `cints-core`

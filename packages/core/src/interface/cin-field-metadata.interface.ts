@@ -2,7 +2,7 @@ import { CinEditorParser } from "../enum/cin-text-mode.enum";
 import { CinFieldType } from "../enum/cin-field-type.enum";
 import { CrudActionsEnum } from "../enum/crud-actions";
 import { CinFileType } from "../enum/cin-file-type.enum";
-import { AnyObject } from "yup";
+import { AnyObject } from "../types/any-object.type";
 import { CinDateStructure } from "../enum/cin-date-structure.enum";
 import { CinModel } from "../model/cin-crud-model";
 import { CinCustomComponentInterface } from "./cin-custom-component.interface";
