@@ -1,5 +1,24 @@
 # Changelog
 
+All notable changes to this project are documented in this file.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Changed
+
+- Forked from `cints-core` 0.0.4 as `metacrud`. The git history of `cints-core` is kept.
+- The repository is a pnpm workspace. The library moved from the root to `packages/core`, and the example from `example` to `examples/basic`.
+- `change-log.md` is now `CHANGELOG.md`, and `docs/design.puml` is `packages/core/design.puml`.
+
+### Removed
+
+- The npm lockfiles (`package-lock.json`). The workspace uses pnpm.
+
+## History of `cints-core`
+
+The entries below were written for `cints-core`, before the fork.
+
 ## `v[0.0.4] - (2026-11-10)`
 
 Entries below this one use the version numbers of the package before it was renamed.
